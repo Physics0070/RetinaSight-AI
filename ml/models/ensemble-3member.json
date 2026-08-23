@@ -1,0 +1,155 @@
+{
+  "measured_on": "held-out split of data/aptos_456",
+  "split_seed": 42,
+  "val_fraction": 0.15,
+  "val_size": 546,
+  "image_size": 456,
+  "tta": "dihedral",
+  "tta_views": [
+    "identity",
+    "hflip",
+    "vflip",
+    "rot180",
+    "rot90",
+    "rot270",
+    "rot90_hflip",
+    "rot270_hflip"
+  ],
+  "members": [
+    "models\\efficientnet_b0-20260823-115322\\best.pt",
+    "models\\efficientnet_b0-20260823-153039\\best.pt",
+    "models\\efficientnet_b0-20260823-163836\\best.pt"
+  ],
+  "clinically_validated": false,
+  "note": "Development metrics on a held-out split. NOT clinical validation. Accuracy is 5-class exact match; referable sensitivity is the binary moderate-or-worse decision. They are different metrics and must not be substituted for one another.",
+  "results": {
+    "member1 (efficientnet_b0-20260823-115322) | no TTA": {
+      "expected_grade": {
+        "accuracy": 0.815,
+        "macro_f1": 0.6687,
+        "quadratic_kappa": 0.9203,
+        "referable_sensitivity": 0.9502,
+        "referable_specificity": 0.9446
+      },
+      "argmax": {
+        "accuracy": 0.8388,
+        "macro_f1": 0.6995,
+        "quadratic_kappa": 0.9037,
+        "referable_sensitivity": 0.9412,
+        "referable_specificity": 0.9569
+      }
+    },
+    "member1 (efficientnet_b0-20260823-115322) | TTA dihedral": {
+      "expected_grade": {
+        "accuracy": 0.8223,
+        "macro_f1": 0.6792,
+        "quadratic_kappa": 0.9177,
+        "referable_sensitivity": 0.9548,
+        "referable_specificity": 0.9508
+      },
+      "argmax": {
+        "accuracy": 0.848,
+        "macro_f1": 0.7147,
+        "quadratic_kappa": 0.9092,
+        "referable_sensitivity": 0.9412,
+        "referable_specificity": 0.9631
+      }
+    },
+    "member2 (efficientnet_b0-20260823-153039) | no TTA": {
+      "expected_grade": {
+        "accuracy": 0.8242,
+        "macro_f1": 0.6994,
+        "quadratic_kappa": 0.9252,
+        "referable_sensitivity": 0.9412,
+        "referable_specificity": 0.9692
+      },
+      "argmax": {
+        "accuracy": 0.8535,
+        "macro_f1": 0.7335,
+        "quadratic_kappa": 0.9151,
+        "referable_sensitivity": 0.9231,
+        "referable_specificity": 0.9723
+      }
+    },
+    "member2 (efficientnet_b0-20260823-153039) | TTA dihedral": {
+      "expected_grade": {
+        "accuracy": 0.8223,
+        "macro_f1": 0.6933,
+        "quadratic_kappa": 0.9217,
+        "referable_sensitivity": 0.9457,
+        "referable_specificity": 0.96
+      },
+      "argmax": {
+        "accuracy": 0.87,
+        "macro_f1": 0.7513,
+        "quadratic_kappa": 0.9266,
+        "referable_sensitivity": 0.9231,
+        "referable_specificity": 0.9723
+      }
+    },
+    "member3 (efficientnet_b0-20260823-163836) | no TTA": {
+      "expected_grade": {
+        "accuracy": 0.8004,
+        "macro_f1": 0.6499,
+        "quadratic_kappa": 0.9151,
+        "referable_sensitivity": 0.9095,
+        "referable_specificity": 0.9723
+      },
+      "argmax": {
+        "accuracy": 0.8223,
+        "macro_f1": 0.6795,
+        "quadratic_kappa": 0.8868,
+        "referable_sensitivity": 0.8054,
+        "referable_specificity": 0.9846
+      }
+    },
+    "member3 (efficientnet_b0-20260823-163836) | TTA dihedral": {
+      "expected_grade": {
+        "accuracy": 0.804,
+        "macro_f1": 0.6268,
+        "quadratic_kappa": 0.9133,
+        "referable_sensitivity": 0.9095,
+        "referable_specificity": 0.9754
+      },
+      "argmax": {
+        "accuracy": 0.8242,
+        "macro_f1": 0.677,
+        "quadratic_kappa": 0.8867,
+        "referable_sensitivity": 0.8054,
+        "referable_specificity": 0.9846
+      }
+    },
+    "ENSEMBLE | no TTA": {
+      "expected_grade": {
+        "accuracy": 0.8315,
+        "macro_f1": 0.7011,
+        "quadratic_kappa": 0.9295,
+        "referable_sensitivity": 0.9593,
+        "referable_specificity": 0.9662
+      },
+      "argmax": {
+        "accuracy": 0.8608,
+        "macro_f1": 0.7363,
+        "quadratic_kappa": 0.9169,
+        "referable_sensitivity": 0.9231,
+        "referable_specificity": 0.9785
+      }
+    },
+    "ENSEMBLE | TTA dihedral": {
+      "expected_grade": {
+        "accuracy": 0.8388,
+        "macro_f1": 0.7082,
+        "quadratic_kappa": 0.9282,
+        "referable_sensitivity": 0.9548,
+        "referable_specificity": 0.9723
+      },
+      "argmax": {
+        "accuracy": 0.8571,
+        "macro_f1": 0.7373,
+        "quadratic_kappa": 0.9182,
+        "referable_sensitivity": 0.9186,
+        "referable_specificity": 0.9754
+      }
+    }
+  }
+}

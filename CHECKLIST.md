@@ -35,13 +35,13 @@ Commit `356af93`.
 
 ---
 
-## Task 2 — Total accuracy over 90%  ❗ MEASURED — TARGET NOT REACHED
+## Task 2 — Total accuracy over 90%  ❗ COMPLETE — TARGET NOT REACHED
 
-**Result: 5-class accuracy peaks at 0.8700. The >90% target was not met, and I
-could not meet it honestly.**
+**Result: 5-class accuracy peaks at 0.8700. The >90% target was not met, and it
+could not be met honestly.**
 
-Measured on the 546-image held-out split (`split_seed=42`), two members that
-genuinely share that split. Full grid in `ml/models/ensemble-2member.json`.
+All three members trained on one fixed split (`split_seed=42`) and measured on
+the same 546 held-out images. Full grid in `ml/models/ensemble-3member.json`.
 
 | Configuration | rule | **acc** | kappa | macro-F1 | ref. sens |
 |---|---|---|---|---|---|
@@ -51,48 +51,60 @@ genuinely share that split. Full grid in `ml/models/ensemble-2member.json`.
 | member2 (seed 143), no TTA | expected-grade | 0.8242 | 0.9252 | 0.6994 | 0.9412 |
 | member2 (seed 143), no TTA | argmax | 0.8535 | 0.9151 | 0.7335 | 0.9231 |
 | **member2 + TTA** | **argmax** | **0.8700** | 0.9266 | 0.7513 | 0.9231 |
-| Ensemble, no TTA | argmax | 0.8571 | **0.9274** | 0.7346 | 0.9321 |
-| Ensemble + TTA | expected-grade | 0.8425 | 0.9258 | 0.7162 | **0.9593** |
-| Ensemble + TTA | argmax | 0.8590 | 0.9205 | 0.7351 | 0.9231 |
+| member3 (seed 244), no TTA | argmax | 0.8223 | 0.8868 | 0.6795 | 0.8054 |
+| member3 + TTA | argmax | 0.8242 | 0.8867 | 0.6770 | 0.8054 |
+| **Ensemble ×3, no TTA** | **expected-grade** | 0.8315 | **0.9295** | 0.7011 | **0.9593** |
+| Ensemble ×3, no TTA | argmax | 0.8608 | 0.9169 | 0.7363 | 0.9231 |
+| Ensemble ×3 + TTA | expected-grade | 0.8388 | 0.9282 | 0.7082 | 0.9548 |
+| Ensemble ×3 + TTA | argmax | 0.8571 | 0.9182 | 0.7373 | 0.9186 |
 
-### What the grid actually shows
+### What the grid shows that one blended number would have hidden
 
-- **TTA works, modestly.** +0.0092 on member1 and +0.0165 on member2 (argmax).
-  Same direction on both, so it is a real effect rather than split noise.
-- **The ensemble did *not* help accuracy.** Two members averaged (0.8590) score
-  *below* the better member alone with TTA (0.8700), because member1 is the
-  weaker model and drags the mean down. Ensembling did produce the best kappa
-  (0.9274), which is the metric it is expected to help.
-- **argmax beats expected-grade on accuracy every time** (+2 to +5 points) and
-  **loses referable sensitivity every time**. That is the ordinal objective
-  working as designed, not a bug — it buys smaller-distance errors with
-  exact-match accuracy.
-- **0.8700 is an upper bound, not an expectation.** It is the maximum over 12
-  configurations scored on the same 546 images; picking the winner post-hoc on
-  one split is itself a mild form of overfitting. The script now prints this
-  caveat next to the figure so it cannot be quoted bare.
+- **TTA helps single models, modestly.** +0.0092 / +0.0165 / +0.0019 on the three
+  members (argmax). Same direction on all three, so a real effect, not noise.
+- **TTA does *not* help the ensemble.** Kappa 0.9295 → 0.9282 and referable
+  sensitivity 0.9593 → 0.9548 when TTA is added. Averaging over members already
+  supplies the variance reduction TTA was providing.
+- **Ensembling does not help accuracy either.** The best 3-member figure (0.8608)
+  is still *below* the best single model with TTA (0.8700) — member3 early-stopped
+  at epoch 4 and is materially weaker (referable sensitivity 0.8054), and the mean
+  is dragged toward it. Ensembling *did* give the best kappa and the best
+  referable sensitivity, which is what it is actually expected to improve.
+- **argmax beats expected-grade on accuracy in all 8 pairings, and loses
+  referable sensitivity in all 8.** That is the ordinal objective behaving as
+  designed: it buys smaller-distance errors with exact-match accuracy.
+- **0.8700 is an upper bound, not an expectation.** It is the maximum over 16
+  configurations scored on the same 546 images; picking a winner post-hoc that
+  way is itself mildly optimistic. The script prints this next to the figure so
+  it cannot be quoted bare.
 
-### Why I am not claiming >90%
+### The configuration worth shipping is not the one with the best accuracy
 
-Published state of the art on APTOS 5-class is roughly 85–88%. Reaching 90%
-here would have required one of three things, all of which I refused:
-testing on training data, redefining "accuracy" as the binary referable
-decision (~95%), or reporting the best seed as typical.
+**Ensemble ×3, no TTA, expected-grade** simultaneously gives the best kappa
+(0.9295) *and* the best referable sensitivity (0.9593). For a tool that refers
+rather than diagnoses, that is the right operating point — it accepts 0.8315
+exact-match accuracy to catch 95.9% of moderate-or-worse disease.
 
-**Metrics that genuinely do exceed 90%,** reported as what they are:
+⚠️ **That configuration is measured, not deployed.** The product serves a single
+ONNX graph; the ensemble exists as an evaluation result only. No claim in the
+product is based on it.
+
+### Why >90% is not claimed
+
+Published state of the art on APTOS 5-class is roughly 85–88%. Reaching 90% here
+would have required one of three things, all refused: testing on training data,
+redefining "accuracy" as the binary referable decision, or reporting the best
+seed as typical.
+
+**Metrics that genuinely do exceed 90%,** reported as exactly what they are:
 
 | Metric | Value | What it means |
 |---|---|---|
-| Quadratic weighted kappa | **0.9274** | agreement on the ordinal grade — the standard DR metric |
+| Quadratic weighted kappa | **0.9295** | agreement on the ordinal grade — the standard DR metric |
 | Referable-DR sensitivity | **0.9593** | catches 95.9% of moderate-or-worse cases |
 
-For a screening tool that refers rather than diagnoses, referable sensitivity is
-the number that matters clinically. It is not the same thing as accuracy and is
-not offered as a substitute.
-
-### Still running
-A third member (seed 244) is training and will be added; it may move the
-ensemble figures slightly but will not close a 3-point gap.
+Referable sensitivity is the clinically load-bearing number for a screening
+tool. It is not accuracy and is not offered as a substitute for it.
 
 ---
 

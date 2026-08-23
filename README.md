@@ -183,6 +183,36 @@ across-seed column is the honest estimate of what a rerun would produce.
 | Accuracy | 0.833 | 0.835 ± 0.021 | 0.846 |
 | Macro F1 | 0.721 | 0.701 ± 0.029 | 0.707 |
 
+#### How far accuracy can be pushed, measured rather than guessed
+
+A separate experiment trained three models on **one fixed split** and measured
+test-time augmentation and ensembling independently
+(`ml/models/ensemble-3member.json`, reproduce with `evaluation/ensemble.py`):
+
+| Configuration | rule | **acc** | kappa | ref. sens |
+|---|---|---|---|---|
+| best single model + TTA | argmax | **0.8700** | 0.9266 | 0.9231 |
+| ensemble ×3, no TTA | argmax | 0.8608 | 0.9169 | 0.9231 |
+| **ensemble ×3, no TTA** | **expected-grade** | 0.8315 | **0.9295** | **0.9593** |
+
+Three findings worth keeping:
+
+- **TTA helps single models** (+0.009 to +0.017, consistent across all three) but
+  **does not help the ensemble** — averaging members already supplies the
+  variance reduction TTA was providing.
+- **Ensembling does not raise accuracy.** The best ensemble figure stays below
+  the best single model with TTA, because one member early-stopped and is
+  materially weaker; the mean is dragged toward it. Ensembling does give the best
+  kappa and the best referable sensitivity.
+- **5-class accuracy tops out at 0.8700**, and that number is the maximum over 16
+  configurations on one split — an upper bound, not an expectation. Published
+  state of the art on this dataset is roughly 85–88%. Anything advertising >90%
+  exact-match accuracy here is measuring something else, usually the binary
+  referable decision.
+
+⚠️ The ensemble is an **evaluation result, not a deployed capability**. The
+product serves a single ONNX graph, and no claim in the product rests on it.
+
 **Read these honestly.**
 
 - **Kappa is the headline** because the grades are ordinal — confusing *no DR*
