@@ -1,10 +1,44 @@
 # UI design system
 
 The interface should read as **retinal imaging + medical technology**, not as a
-generic SaaS dashboard. Two ideas carry that:
+generic SaaS dashboard. Three ideas carry that:
 
-1. **Contextual morphism** — each role gets the material its work demands.
-2. **The retinal image is the subject.** Chrome recedes around it.
+1. **Futuristic clinical glass** — one coherent material across the product.
+2. **Contextual density** — each role gets its own accent and information density.
+3. **The retinal image is the subject.** Chrome recedes around it.
+
+---
+
+## The material
+
+Every workspace is a deep vitreous ground with frosted, luminous panels floating
+above it, edge-lit in the palette of retinal imaging: the amber-red of the fundus
+and a diagnostic cyan for instrument readouts.
+
+Three layers build the depth:
+
+| Layer | What it does |
+|---|---|
+| **Ambient light** (`body::before`) | fixed radial gradients — the light source the glass refracts |
+| **Grid** (`body::after`) | a faint 56px lattice, masked to fade out, so blur has something to work on |
+| **Glass panels** (`.rs-panel`) | `backdrop-filter: blur() saturate()` + a specular top edge |
+
+The ambient layer is `position: fixed`, so glass moves across a *stationary*
+light source as the page scrolls. That is what makes the depth read as physical
+rather than painted on.
+
+The specular sheen is a 1px gradient border drawn with a mask-composite trick —
+a real pane of glass catches light along its top edge, and without it the panels
+look like flat translucent rectangles.
+
+```css
+.rs-panel {
+  background: var(--rs-surface-raised);   /* translucent */
+  border: 1px solid var(--rs-line);
+  backdrop-filter: blur(var(--rs-glass-blur)) saturate(var(--rs-glass-saturate));
+  box-shadow: var(--rs-glass-edge), var(--rs-glass-inner), 0 10px 30px …;
+}
+```
 
 ---
 
@@ -14,54 +48,62 @@ Everything resolves to CSS custom properties in
 `dashboard/src/design-system/tokens/tokens.css`. Components contain **no colour
 literals**; Tailwind is a utility layer mapped onto the same tokens.
 
-The palette comes from fundus photography itself — the deep vitreous dark, the
-amber-red of the retina, and a clinical cyan for instrument readouts.
+Role themes switch via a `data-role` attribute on the document root, which
+re-points the same token names — so one component renders correctly in all four
+workspaces.
 
-```css
---rs-retina: #c2410c;        /* fundus amber-red   */
---rs-retina-deep: #7c2d12;
---rs-vitreous: #0a0f16;      /* imaging ground     */
-```
+| Role | Accent | Ground | Character |
+|---|---|---|---|
+| **Health worker** | teal `#2ee6c5` | `#060d12` | highest contrast, largest controls — used outdoors, one-handed |
+| **Doctor** | cyan `#22d3ee` | `#04060c` | darkest of the four; retinal images must be judged against darkness |
+| **Patient** | warm amber `#ffa76b` | `#0d1018` | lightest, gentler blur, larger type — an anxious reader shouldn't decode an interface |
+| **Admin** | indigo `#7c8cff` | `#070a13` | densest, monitoring-oriented |
 
-Role themes are switched by a `data-role` attribute on the document root, which
-re-points the same token names. One component therefore renders correctly in all
-four workspaces.
+One material, four densities. The work genuinely differs — a nurse in a field
+clinic and a clinician at a workstation are not doing the same job — but they now
+share one visual language.
 
 ---
 
-## Contextual morphism
+## Contrast is a hard constraint, not a preference
 
-| Role | Material | Why |
-|---|---|---|
-| **Health worker** | medical-device **neumorphism** — soft tactile surfaces, physical depth, large controls | used one-handed, outdoors, sometimes gloved; should feel like an instrument |
-| **Doctor** | clinical **glassmorphism** on a dark imaging ground | retinal images must be judged against darkness, as on a lightbox or DICOM workstation |
-| **Patient** | soft, calm surfaces, larger base type, minimal glass | anxious reader, low cognitive load, high legibility |
-| **Admin** | structured command-centre glass over slate | dense, monitoring-oriented, information-first |
+Translucency is the main risk this design takes: a frosted panel can quietly
+destroy legibility, and the failure is invisible in review because the colours
+all *look* deliberate.
 
-Glass is applied **only** in the dark themes, where it reads as instrument
-chrome. In the light themes it would be decoration, so it is not used.
+**A real bug shipped and was caught only by measuring in the browser.** The
+primary button used the Tailwind arbitrary class `text-[var(--rs-accent-ink)]`.
+That syntax is ambiguous between colour and font-size, so Tailwind never emitted
+the rule; the button inherited near-white body ink and rendered white-on-cyan at
+a contrast ratio of **1.58** — unreadable.
 
-```css
-[data-role="doctor"] .rs-panel,
-[data-role="admin"] .rs-panel {
-  backdrop-filter: blur(14px) saturate(1.25);
-}
+Fixed by setting the colour inline, and pinned by
+`dashboard/src/test/contrast.test.tsx` — **30 tests** that compute real WCAG
+ratios for every theme:
+
 ```
+accent ink on accent fill        >= 4.5   (all five themes)
+primary ink on the glass ground  >= 4.5
+muted ink on the glass ground    >= 4.5
+subtle ink (labels only)         >= 3.0
+risk colours on the ground       >= 3.0
+```
+
+One test deliberately asserts that near-white on a bright accent **fails**, so
+the reason the rule exists is documented alongside the fix.
 
 ---
 
 ## Retinal image viewer
 
-`design-system/medical-imaging/RetinalImageViewer.tsx` — the centrepiece of the
-clinical workspace.
+`design-system/medical-imaging/RetinalImageViewer.tsx` — the centrepiece.
 
 - Deep radial ground, never pure black — the standard for judging fundus imagery.
 - Layers: **Original · Heat map · Overlay**, disabled when no explanation exists.
-- Zoom (1×–6×), pan by pointer drag, fit-to-view.
-- Side-by-side comparison of both eyes.
+- Zoom (1×–6×), pointer-drag pan, fit-to-view, side-by-side comparison.
 - Attention-region boxes with intensity labels.
-- **Laterality is always visible** — "Left eye (OS)" / "Right eye (OD)" — because
-  confusing eyes is a clinical error.
+- **Laterality always visible** — "Left eye (OS)" / "Right eye (OD)". Confusing
+  eyes is a clinical error.
 - The Grad-CAM caveat appears whenever an explanation layer is active.
 
 Fully keyboard operable: arrows pan, `+`/`-` zoom, `0` resets. A mouse is never
@@ -71,28 +113,25 @@ required.
 
 ## Clinical risk — never colour alone
 
-This is a safety requirement, not a preference. Severity is carried by **four
-redundant channels**:
+A safety requirement, not a preference. Severity is carried by **four redundant
+channels**:
 
 | Channel | Low | Moderate | High | Urgent |
 |---|:--:|:--:|:--:|:--:|
 | Glyph | ○ | ◐ | ◕ | ● |
 | Label | "Low" | "Moderate" | "High" | "Urgent" |
 | Position on the ordered scale | 1 | 2 | 3 | 4 |
-| Colour | teal | amber | orange | red |
+| Colour | teal | amber | orange | rose |
 
 Colour is the **last** cue, so the interface stays readable with colour-vision
-deficiency, in greyscale, and to a screen reader. Enforced by tests that assert
-every level has a text label and a distinct glyph.
-
-The scale exposes itself as `role="img"` with a description:
-*"Risk level: Urgent. Urgent referral."*
+deficiency, in greyscale, and to a screen reader. The scale exposes itself as
+`role="img"` with a description: *"Risk level: Urgent. Urgent referral."*
 
 ### Confidence
 
-Rendered as a segmented meter labelled **"model confidence"** — never as a bare
-percentage that could be mistaken for a probability of disease. Missing
-confidence shows "Not available" rather than a misleading zero.
+A segmented meter labelled **"model confidence"** — never a bare percentage that
+could be mistaken for a probability of disease. Missing confidence shows "Not
+available" rather than a misleading zero.
 
 ---
 
@@ -105,14 +144,14 @@ Two components appear wherever AI output does:
 - `DevelopmentModelBanner` — unmissable warning when output came from the
   placeholder model.
 
-Both are tested for their exact wording, because vaguer phrasing would misrepresent
-what the system does.
+Both are tested for their exact wording; vaguer phrasing would misrepresent what
+the system does.
 
 ---
 
 ## Language register
 
-The same clinical fact is worded differently per audience:
+The same clinical fact, worded for its audience:
 
 | Category | Clinician | Patient |
 |---|---|---|
@@ -130,8 +169,7 @@ word "diagnosis".
 
 ## Error and offline states
 
-Never a raw exception, status code or stack trace. The API supplies a
-human-readable message and the UI renders it directly:
+Never a raw exception, status code or stack trace:
 
 ```
 We couldn't complete the screening.
@@ -157,23 +195,26 @@ Purposeful only:
 
 | Animation | Where | Meaning |
 |---|---|---|
+| Ambient drift | background | 18s opacity breath — keeps a mostly-dark screen from feeling dead |
+| Panel reveal | on mount | 6px rise, one frame of orientation |
 | Scanning sweep | during the quality gate | work is happening |
 | Progressive readouts | align / light / focus | live instrument feedback |
-| Heatmap reveal | Grad-CAM | layer change |
+| Hover lift | interactive panels | 2px rise + accent edge |
 
-All of it is suppressed under `prefers-reduced-motion`, and none of it is the
-only channel carrying information.
+All suppressed under `prefers-reduced-motion`, and none of it is the only
+channel carrying information.
 
 ---
 
 ## Accessibility
 
-- Semantic HTML; `role` and `aria-*` only where semantics are insufficient.
+- Semantic HTML; `role`/`aria-*` only where semantics are insufficient.
 - Visible focus rings everywhere, never removed.
 - A skip link on every portal shell.
 - Full keyboard operation, including the image viewer.
 - Live regions for loading, offline and error states.
 - **Severity never depends on colour alone.**
+- **Contrast is enforced by test**, because glass makes it easy to break.
 
 ---
 
@@ -193,5 +234,5 @@ Designed per role rather than by shrinking one layout:
 ## Deliberately avoided
 
 Generic admin templates · the default SaaS blue · purple "AI" gradients ·
-glass everywhere regardless of context · decorative blobs · a chatbot shell ·
-uniform rounded-card grids with no hierarchy.
+decorative blobs · a chatbot shell · uniform rounded-card grids with no
+hierarchy · glass so heavy it costs legibility.

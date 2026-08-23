@@ -3,9 +3,20 @@
    Single source of truth for colour, elevation, typography, motion.
    Components reference these variables; never raw hex values.
 
-   The palette is drawn from retinal imaging itself: the deep vitreous dark of
-   a fundus photograph, the amber-red of the retina, and a clinical cyan for
-   instrument readouts. It is not a generic SaaS blue.
+   VISUAL LANGUAGE — futuristic clinical glass
+   ------------------------------------------
+   Every workspace is built on a deep vitreous ground with frosted, luminous
+   glass panels floating above it, edge-lit in the palette of retinal imaging:
+   the amber-red of the fundus and a diagnostic cyan for instrument readouts.
+
+   Glass is used as *instrument chrome*, not decoration — it recedes so the
+   retinal image dominates. Each role still gets its own accent and density,
+   because a health worker outdoors and a clinician at a workstation are not
+   doing the same job, but they now share one coherent material.
+
+   ACCESSIBILITY CONSTRAINT: translucency must never cost legibility. Text sits
+   on tokens with sufficient opacity to hold contrast, and the patient theme
+   deliberately runs a lighter, calmer glass with larger type.
    ========================================================================== */
 
 :root {
@@ -24,7 +35,7 @@
 
   --rs-tracking-caps: 0.08em;
 
-  /* ---- spacing scale ---- */
+  /* ---- spacing ---- */
   --rs-space-1: 0.25rem;
   --rs-space-2: 0.5rem;
   --rs-space-3: 0.75rem;
@@ -33,170 +44,169 @@
   --rs-space-6: 2rem;
   --rs-space-7: 3rem;
 
-  /* ---- radius ---- */
-  --rs-radius-xs: 4px;
-  --rs-radius-sm: 8px;
-  --rs-radius-md: 12px;
-  --rs-radius-lg: 18px;
-  --rs-radius-xl: 28px;
+  /* ---- radius: generous, for a soft glass feel ---- */
+  --rs-radius-xs: 6px;
+  --rs-radius-sm: 10px;
+  --rs-radius-md: 14px;
+  --rs-radius-lg: 20px;
+  --rs-radius-xl: 30px;
 
-  /* ---- retinal / clinical hues (shared across roles) ---- */
-  --rs-retina: #c2410c;
+  /* ---- retinal / clinical hues ---- */
+  --rs-retina: #ff6b3d;
   --rs-retina-deep: #7c2d12;
-  --rs-retina-glow: #fb923c;
-  --rs-vitreous: #0a0f16;
+  --rs-retina-glow: #ffa76b;
+  --rs-vitreous: #05070d;
 
   /* ---- clinical risk scale ----
-     Severity is ALWAYS paired with a label, icon and position on the scale.
-     Colour never carries the meaning alone (accessibility + patient safety). */
-  --rs-risk-low: #0f766e;
-  --rs-risk-moderate: #a16207;
-  --rs-risk-high: #c2410c;
-  --rs-risk-urgent: #b91c1c;
-  --rs-risk-low-wash: #ccfbf1;
-  --rs-risk-moderate-wash: #fef3c7;
-  --rs-risk-high-wash: #ffedd5;
-  --rs-risk-urgent-wash: #fee2e2;
-
-  /* ---- status ---- */
-  --rs-ok: #0f766e;
-  --rs-warn: #a16207;
-  --rs-danger: #b91c1c;
-  --rs-info: #0e7490;
-
-  /* ---- default (light) surfaces — overridden per role below ---- */
-  --rs-surface: #f4f6f8;
-  --rs-surface-raised: #ffffff;
-  --rs-surface-sunken: #e6eaef;
-  --rs-ink: #10151c;
-  --rs-ink-muted: #4a5563;
-  --rs-ink-subtle: #6b7684;
-  --rs-line: #d3dae2;
-  --rs-accent: #0e7490;
-  --rs-accent-ink: #ffffff;
-
-  /* ---- elevation ---- */
-  --rs-shadow-raised: 0 1px 2px rgba(16, 21, 28, 0.06), 0 4px 12px rgba(16, 21, 28, 0.05);
-  --rs-shadow-sunken: inset 0 1px 3px rgba(16, 21, 28, 0.1);
-  --rs-shadow-panel: 0 12px 32px rgba(16, 21, 28, 0.1);
-  --rs-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--rs-accent) 35%, transparent);
-
-  /* ---- motion ---- */
-  --rs-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --rs-duration-fast: 120ms;
-  --rs-duration: 220ms;
-  --rs-duration-slow: 420ms;
-}
-
-/* ==========================================================================
-   CONTEXTUAL MORPHISM — each role gets its own material, matched to its work.
-   ========================================================================== */
-
-/* HEALTH WORKER — medical-device neumorphism.
-   Used one-handed, often outdoors, sometimes gloved: soft tactile surfaces,
-   large controls, physical-feeling depth. */
-[data-role="worker"] {
-  --rs-surface: #e8ecf1;
-  --rs-surface-raised: #eef2f6;
-  --rs-surface-sunken: #dde3ea;
-  --rs-ink: #16202b;
-  --rs-ink-muted: #46566a;
-  --rs-ink-subtle: #6a7a8c;
-  --rs-line: #c9d3de;
-  --rs-accent: #0f766e;
-  --rs-accent-ink: #ffffff;
-
-  --rs-shadow-raised: 6px 6px 14px rgba(139, 155, 172, 0.42),
-    -6px -6px 14px rgba(255, 255, 255, 0.92);
-  --rs-shadow-sunken: inset 4px 4px 9px rgba(139, 155, 172, 0.42),
-    inset -4px -4px 9px rgba(255, 255, 255, 0.9);
-  --rs-shadow-panel: 10px 10px 26px rgba(139, 155, 172, 0.34),
-    -8px -8px 22px rgba(255, 255, 255, 0.86);
-}
-
-/* DOCTOR — clinical glassmorphism on a dark imaging ground.
-   Retinal images must be judged against darkness, exactly like a lightbox
-   or DICOM workstation. Chrome recedes; the image dominates. */
-[data-role="doctor"] {
-  --rs-surface: #0a0f16;
-  --rs-surface-raised: rgba(24, 33, 45, 0.72);
-  --rs-surface-sunken: #05080d;
-  --rs-ink: #e8eef5;
-  --rs-ink-muted: #9dabbd;
-  --rs-ink-subtle: #6d7d91;
-  --rs-line: rgba(148, 170, 194, 0.22);
-  --rs-accent: #22d3ee;
-  --rs-accent-ink: #04212b;
-
+     Severity is ALWAYS paired with a label, glyph and position on the scale.
+     Colour never carries the meaning alone. */
   --rs-risk-low: #2dd4bf;
   --rs-risk-moderate: #fbbf24;
   --rs-risk-high: #fb923c;
-  --rs-risk-urgent: #f87171;
+  --rs-risk-urgent: #fb7185;
   --rs-risk-low-wash: rgba(45, 212, 191, 0.14);
   --rs-risk-moderate-wash: rgba(251, 191, 36, 0.14);
   --rs-risk-high-wash: rgba(251, 146, 60, 0.14);
-  --rs-risk-urgent-wash: rgba(248, 113, 113, 0.16);
+  --rs-risk-urgent-wash: rgba(251, 113, 133, 0.16);
 
+  /* ---- status ---- */
   --rs-ok: #2dd4bf;
   --rs-warn: #fbbf24;
-  --rs-danger: #f87171;
-  --rs-info: #22d3ee;
+  --rs-danger: #fb7185;
+  --rs-info: #38bdf8;
 
-  --rs-shadow-raised: 0 1px 0 rgba(255, 255, 255, 0.05) inset,
-    0 10px 30px rgba(0, 0, 0, 0.55);
-  --rs-shadow-sunken: inset 0 2px 10px rgba(0, 0, 0, 0.6);
-  --rs-shadow-panel: 0 20px 50px rgba(0, 0, 0, 0.62);
+  /* ---- default theme: deep clinical glass ---- */
+  --rs-surface: #070b14;
+  --rs-surface-raised: rgba(20, 28, 43, 0.55);
+  --rs-surface-sunken: rgba(6, 10, 18, 0.66);
+  --rs-ink: #eaf0f9;
+  --rs-ink-muted: #9fb0c7;
+  --rs-ink-subtle: #6b7c93;
+  --rs-line: rgba(148, 178, 214, 0.16);
+  --rs-accent: #22d3ee;
+  --rs-accent-ink: #04212b;
+
+  /* Ambient light behind the glass — what makes it read as depth
+     rather than flat translucency. */
+  --rs-ambient:
+    radial-gradient(1100px 600px at 12% -10%, rgba(34, 211, 238, 0.16), transparent 60%),
+    radial-gradient(900px 520px at 92% 8%, rgba(255, 107, 61, 0.13), transparent 62%),
+    radial-gradient(1000px 700px at 50% 108%, rgba(99, 102, 241, 0.12), transparent 60%);
+
+  /* ---- glass mechanics ---- */
+  --rs-glass-blur: 22px;
+  --rs-glass-saturate: 1.5;
+  /* Top edge-light: the highlight that sells a pane of glass. */
+  --rs-glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --rs-glass-inner: inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+
+  /* ---- elevation ---- */
+  --rs-shadow-raised:
+    var(--rs-glass-edge), var(--rs-glass-inner),
+    0 10px 30px rgba(2, 6, 14, 0.55);
+  --rs-shadow-sunken: inset 0 2px 12px rgba(2, 6, 14, 0.6);
+  --rs-shadow-panel:
+    var(--rs-glass-edge), 0 24px 60px rgba(2, 6, 14, 0.65);
+  --rs-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--rs-accent) 40%, transparent);
+  /* Accent glow for primary actions and active instrument states. */
+  --rs-glow: 0 0 0 1px color-mix(in srgb, var(--rs-accent) 45%, transparent),
+    0 8px 26px color-mix(in srgb, var(--rs-accent) 28%, transparent);
+
+  /* ---- motion ---- */
+  --rs-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --rs-duration-fast: 130ms;
+  --rs-duration: 240ms;
+  --rs-duration-slow: 460ms;
 }
 
-/* PATIENT — soft, calm, high-legibility.
-   Low cognitive load, generous type, gentle depth, no clinical jargon. */
+/* ==========================================================================
+   ROLE THEMES
+   One material, four densities. Each keeps its own accent and information
+   density because the work differs, but the glass language is shared.
+   ========================================================================== */
+
+/* HEALTH WORKER — field glass.
+   Used one-handed, often outdoors: higher contrast, larger controls, a warmer
+   teal accent that stays visible in daylight. */
+[data-role="worker"] {
+  --rs-surface: #060d12;
+  --rs-surface-raised: rgba(18, 34, 41, 0.6);
+  --rs-surface-sunken: rgba(5, 12, 16, 0.7);
+  --rs-ink: #e9f6f6;
+  --rs-ink-muted: #9dbcbd;
+  --rs-ink-subtle: #6b8a8c;
+  --rs-line: rgba(140, 214, 210, 0.18);
+  --rs-accent: #2ee6c5;
+  --rs-accent-ink: #032420;
+
+  --rs-ambient:
+    radial-gradient(1000px 560px at 10% -8%, rgba(46, 230, 197, 0.18), transparent 60%),
+    radial-gradient(820px 500px at 95% 10%, rgba(255, 138, 76, 0.12), transparent 62%),
+    radial-gradient(900px 640px at 45% 110%, rgba(20, 184, 166, 0.12), transparent 60%);
+}
+
+/* DOCTOR — imaging glass.
+   The darkest ground of the four: retinal images must be judged against
+   darkness, exactly as on a lightbox or DICOM workstation. Chrome recedes
+   furthest here. */
+[data-role="doctor"] {
+  --rs-surface: #04060c;
+  --rs-surface-raised: rgba(16, 24, 38, 0.52);
+  --rs-surface-sunken: rgba(3, 6, 12, 0.72);
+  --rs-ink: #e8eef8;
+  --rs-ink-muted: #9aacc4;
+  --rs-ink-subtle: #66788f;
+  --rs-line: rgba(138, 170, 214, 0.16);
+  --rs-accent: #22d3ee;
+  --rs-accent-ink: #04212b;
+
+  --rs-glass-blur: 26px;
+  --rs-ambient:
+    radial-gradient(1200px 640px at 15% -12%, rgba(34, 211, 238, 0.15), transparent 62%),
+    radial-gradient(900px 520px at 88% 6%, rgba(255, 107, 61, 0.11), transparent 60%),
+    radial-gradient(1000px 720px at 50% 112%, rgba(56, 189, 248, 0.09), transparent 58%);
+}
+
+/* PATIENT — calm glass.
+   Deliberately the lightest and least busy: larger type, gentler blur, softer
+   contrast. An anxious reader should not be asked to decode an interface. */
 [data-role="patient"] {
-  --rs-surface: #fbf8f4;
-  --rs-surface-raised: #ffffff;
-  --rs-surface-sunken: #f3ede6;
-  --rs-ink: #1f1a17;
-  --rs-ink-muted: #574c45;
-  --rs-ink-subtle: #7a6d64;
-  --rs-line: #e4dbd1;
-  --rs-accent: #9a3412;
-  --rs-accent-ink: #ffffff;
+  --rs-surface: #0d1018;
+  --rs-surface-raised: rgba(33, 40, 56, 0.62);
+  --rs-surface-sunken: rgba(12, 16, 25, 0.66);
+  --rs-ink: #f3f1ee;
+  --rs-ink-muted: #c3bcb4;
+  --rs-ink-subtle: #948d86;
+  --rs-line: rgba(226, 214, 200, 0.16);
+  --rs-accent: #ffa76b;
+  --rs-accent-ink: #2a1206;
 
   --rs-text-base: 1.0625rem;
   --rs-text-sm: 0.9375rem;
 
-  --rs-shadow-raised: 0 2px 4px rgba(74, 59, 48, 0.05),
-    0 8px 20px rgba(74, 59, 48, 0.07);
-  --rs-shadow-panel: 0 14px 34px rgba(74, 59, 48, 0.1);
+  /* Softer blur, warmer light — less clinical, more reassuring. */
+  --rs-glass-blur: 18px;
+  --rs-ambient:
+    radial-gradient(1000px 560px at 12% -8%, rgba(255, 167, 107, 0.16), transparent 60%),
+    radial-gradient(860px 520px at 92% 12%, rgba(251, 146, 60, 0.10), transparent 62%),
+    radial-gradient(900px 660px at 50% 108%, rgba(120, 113, 108, 0.12), transparent 58%);
 }
 
-/* ADMIN — structured command-center glass over slate.
-   Dense, monitoring-oriented, information-first. */
+/* ADMIN — command-centre glass.
+   Densest of the four, cooler accent, monitoring-oriented. */
 [data-role="admin"] {
-  --rs-surface: #11161d;
-  --rs-surface-raised: rgba(30, 39, 50, 0.78);
-  --rs-surface-sunken: #0b0f14;
-  --rs-ink: #e6ebf2;
-  --rs-ink-muted: #9aa7b8;
-  --rs-ink-subtle: #6b7889;
-  --rs-line: rgba(154, 167, 184, 0.2);
-  --rs-accent: #38bdf8;
-  --rs-accent-ink: #062334;
+  --rs-surface: #070a13;
+  --rs-surface-raised: rgba(22, 28, 44, 0.56);
+  --rs-surface-sunken: rgba(6, 9, 16, 0.7);
+  --rs-ink: #e7ecf7;
+  --rs-ink-muted: #9ba8c2;
+  --rs-ink-subtle: #6a778f;
+  --rs-line: rgba(150, 165, 205, 0.16);
+  --rs-accent: #7c8cff;
+  --rs-accent-ink: #0b0f2b;
 
-  --rs-risk-low: #2dd4bf;
-  --rs-risk-moderate: #fbbf24;
-  --rs-risk-high: #fb923c;
-  --rs-risk-urgent: #f87171;
-  --rs-risk-low-wash: rgba(45, 212, 191, 0.14);
-  --rs-risk-moderate-wash: rgba(251, 191, 36, 0.14);
-  --rs-risk-high-wash: rgba(251, 146, 60, 0.14);
-  --rs-risk-urgent-wash: rgba(248, 113, 113, 0.16);
-
-  --rs-ok: #2dd4bf;
-  --rs-warn: #fbbf24;
-  --rs-danger: #f87171;
-  --rs-info: #38bdf8;
-
-  --rs-shadow-raised: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
-    0 8px 24px rgba(0, 0, 0, 0.5);
-  --rs-shadow-panel: 0 18px 44px rgba(0, 0, 0, 0.55);
+  --rs-ambient:
+    radial-gradient(1100px 600px at 8% -10%, rgba(124, 140, 255, 0.16), transparent 60%),
+    radial-gradient(900px 520px at 94% 8%, rgba(34, 211, 238, 0.11), transparent 62%),
+    radial-gradient(1000px 700px at 50% 110%, rgba(168, 85, 247, 0.10), transparent 58%);
 }

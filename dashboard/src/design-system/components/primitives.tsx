@@ -66,22 +66,39 @@ export function Button({
     "transition-all duration-[var(--rs-duration-fast)] disabled:opacity-50 disabled:cursor-not-allowed";
 
   const variants: Record<ButtonVariant, string> = {
-    primary: "text-[var(--rs-accent-ink)] hover:brightness-110 active:brightness-95",
+    primary: "hover:brightness-110 active:brightness-95",
     secondary: "border hover:brightness-105 active:brightness-95",
     ghost: "hover:opacity-80",
-    danger: "text-white hover:brightness-110",
+    danger: "hover:brightness-110",
   };
 
   const variantStyle: Record<ButtonVariant, Record<string, string>> = {
-    primary: { background: "var(--rs-accent)", boxShadow: "var(--rs-shadow-raised)" },
+    primary: {
+      background:
+        "linear-gradient(140deg, color-mix(in srgb, var(--rs-accent) 92%, white), var(--rs-accent))",
+      // Set here rather than via a Tailwind arbitrary class: `text-[var(--x)]`
+      // is ambiguous between colour and font-size, so it silently did not
+      // apply and the button inherited body ink — near-white on a bright
+      // accent, which is unreadable.
+      color: "var(--rs-accent-ink)",
+      boxShadow: "var(--rs-glow)",
+    },
     secondary: {
       background: "var(--rs-surface-raised)",
       borderColor: "var(--rs-line)",
       color: "var(--rs-ink)",
       boxShadow: "var(--rs-shadow-raised)",
+      backdropFilter: "blur(var(--rs-glass-blur)) saturate(var(--rs-glass-saturate))",
+      WebkitBackdropFilter: "blur(var(--rs-glass-blur)) saturate(var(--rs-glass-saturate))",
     },
     ghost: { background: "transparent", color: "var(--rs-ink-muted)" },
-    danger: { background: "var(--rs-danger)", boxShadow: "var(--rs-shadow-raised)" },
+    danger: {
+      background:
+        "linear-gradient(140deg, color-mix(in srgb, var(--rs-danger) 90%, white), var(--rs-danger))",
+      // Dark ink on the light danger tone; white would fail contrast here too.
+      color: "#2a0508",
+      boxShadow: "0 8px 26px color-mix(in srgb, var(--rs-danger) 30%, transparent)",
+    },
   };
 
   return (
@@ -336,9 +353,9 @@ export function Metric({
   const toneColor =
     tone && tone !== "neutral" ? `var(--rs-${tone === "ok" ? "ok" : tone})` : "var(--rs-ink)";
   return (
-    <Panel className="flex flex-col gap-1">
+    <Panel className="rs-panel-interactive flex flex-col gap-1">
       <span className="rs-label">{label}</span>
-      <span className="rs-numeric text-[var(--rs-text-2xl)] font-bold" style={{ color: toneColor }}>
+      <span className="rs-readout text-[var(--rs-text-2xl)] font-bold" style={{ color: toneColor }}>
         {value}
       </span>
       {hint && (

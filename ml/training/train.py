@@ -38,6 +38,7 @@ from datasets.retinal_dataset import (  # noqa: E402
     stratified_split,
 )
 from evaluation.metrics import evaluate_predictions  # noqa: E402
+from training.losses import OrdinalAwareLoss, expected_grade_predictions  # noqa: E402
 from training.model_factory import build_model  # noqa: E402
 
 
@@ -56,6 +57,11 @@ class TrainingConfig:
     amp: bool = True
     num_workers: int = 4
     patience: int = 6
+    # Ordinal term: penalises distant errors, which is what kappa measures.
+    distance_weight: float = 0.5
+    # Predict by rounding the expected grade rather than taking the argmax.
+    expected_grade_decision: bool = True
+    dropout: float = 0.4
 
 
 def set_seed(seed: int) -> None:
@@ -85,6 +91,7 @@ def run_epoch(
     *,
     optimizer: torch.optim.Optimizer | None = None,
     scaler: torch.amp.GradScaler | None = None,
+    expected_grade_decision: bool = False,
 ) -> tuple[float, np.ndarray, np.ndarray]:
     """One pass. Trains when an optimizer is supplied, else evaluates."""
     training = optimizer is not None
@@ -121,7 +128,14 @@ def run_epoch(
             batch = targets.size(0)
             total_loss += loss.item() * batch
             seen += batch
-            all_predictions.append(logits.detach().float().argmax(dim=1).cpu().numpy())
+
+            detached = logits.detach().float()
+            predicted = (
+                expected_grade_predictions(detached)
+                if expected_grade_decision
+                else detached.argmax(dim=1)
+            )
+            all_predictions.append(predicted.cpu().numpy())
             all_targets.append(targets.detach().cpu().numpy())
 
     return (
@@ -174,9 +188,16 @@ def train(config: TrainingConfig) -> Path:
     if config.balance:
         weights = torch.tensor(class_weights(train_samples), dtype=torch.float32, device=device)
         print(f"  class weights: {[round(w, 3) for w in weights.tolist()]}")
-        criterion = nn.CrossEntropyLoss(weight=weights, label_smoothing=0.05)
     else:
-        criterion = nn.CrossEntropyLoss(label_smoothing=0.05)
+        weights = None
+
+    criterion = OrdinalAwareLoss(
+        class_weights=weights,
+        distance_weight=config.distance_weight,
+        label_smoothing=0.05,
+        num_classes=len(CLASS_NAMES),
+    ).to(device)
+    print(f"  ordinal distance weight: {config.distance_weight}")
 
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay
@@ -198,9 +219,13 @@ def train(config: TrainingConfig) -> Path:
         epoch_started = time.time()
 
         train_loss, train_pred, train_true = run_epoch(
-            model, train_loader, criterion, device, optimizer=optimizer, scaler=scaler
+            model, train_loader, criterion, device, optimizer=optimizer, scaler=scaler,
+            expected_grade_decision=config.expected_grade_decision,
         )
-        val_loss, val_pred, val_true = run_epoch(model, val_loader, criterion, device)
+        val_loss, val_pred, val_true = run_epoch(
+            model, val_loader, criterion, device,
+            expected_grade_decision=config.expected_grade_decision,
+        )
         scheduler.step()
 
         train_metrics = evaluate_predictions(train_true, train_pred)
@@ -242,6 +267,7 @@ def train(config: TrainingConfig) -> Path:
                     "image_size": config.image_size,
                     "epoch": epoch,
                     "val_macro_f1": best_score,
+                    "expected_grade_decision": config.expected_grade_decision,
                 },
                 output_dir / "best.pt",
             )
@@ -302,6 +328,10 @@ def parse_args() -> TrainingConfig:
     parser.add_argument("--patience", type=int, default=6)
     parser.add_argument("--no-balance", action="store_true")
     parser.add_argument("--no-amp", action="store_true")
+    parser.add_argument("--distance-weight", type=float, default=0.5,
+                        help="Ordinal penalty strength; 0 disables it.")
+    parser.add_argument("--argmax-decision", action="store_true",
+                        help="Predict by argmax instead of the rounded expected grade.")
     args = parser.parse_args()
 
     return TrainingConfig(
@@ -317,6 +347,8 @@ def parse_args() -> TrainingConfig:
         num_workers=args.num_workers,
         patience=args.patience,
         balance=not args.no_balance,
+        distance_weight=args.distance_weight,
+        expected_grade_decision=not args.argmax_decision,
         amp=not args.no_amp,
     )
 

@@ -45,35 +45,32 @@ export function LoginPage() {
   return (
     <div
       className="flex min-h-full items-center justify-center p-4"
-      style={{
-        background:
-          "radial-gradient(circle at 22% 28%, #1a2430 0%, #0d131b 55%, #06090d 100%)",
-      }}
+      style={{ background: "var(--rs-surface)" }}
     >
       <div className="grid w-full max-w-4xl gap-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
         <section className="hidden flex-col gap-5 lg:flex">
           <FundusIllustration />
-          <h1 className="text-[var(--rs-text-3xl)] font-bold" style={{ color: "#e8eef5" }}>
+          <h1 className="text-[var(--rs-text-3xl)] font-bold" style={{ color: "var(--rs-ink)" }}>
             Retinal screening,
             <br />
             wherever the patient is.
           </h1>
-          <p className="max-w-md text-[var(--rs-text-sm)]" style={{ color: "#93a3b6" }}>
+          <p className="max-w-md text-[var(--rs-text-sm)]" style={{ color: "var(--rs-ink-muted)" }}>
             Smartphone-based retinal capture with an automated quality gate,
             offline-first AI screening, explainable results, risk-based referral
             and clinician review.
           </p>
-          <p className="text-[var(--rs-text-xs)]" style={{ color: "#6d7d91" }}>
+          <p className="text-[var(--rs-text-xs)]" style={{ color: "var(--rs-ink-subtle)" }}>
             AI-assisted screening support — not an autonomous diagnostic device.
           </p>
         </section>
 
-        <Panel className="flex flex-col gap-5" style={{ background: "#f6f8fa" }}>
+        <Panel className="flex flex-col gap-6 p-7">
           <div className="flex flex-col gap-1">
-            <h2 className="text-[var(--rs-text-xl)] font-bold" style={{ color: "#10151c" }}>
+            <h2 className="text-[var(--rs-text-2xl)] font-bold">
               Sign in
             </h2>
-            <p className="text-[var(--rs-text-sm)]" style={{ color: "#4a5563" }}>
+            <p className="text-[var(--rs-text-sm)]" style={{ color: "var(--rs-ink-muted)" }}>
               You'll be taken to the workspace for your role.
             </p>
           </div>
@@ -87,7 +84,6 @@ export function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                style={{ background: "#ffffff", borderColor: "#d3dae2", color: "#10151c" }}
               />
             </Field>
 
@@ -99,7 +95,6 @@ export function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={{ background: "#ffffff", borderColor: "#d3dae2", color: "#10151c" }}
               />
             </Field>
 
@@ -107,7 +102,7 @@ export function LoginPage() {
               <p
                 role="alert"
                 className="rounded-[var(--rs-radius-sm)] px-3 py-2 text-[var(--rs-text-sm)]"
-                style={{ background: "#fee2e2", color: "#991b1b" }}
+                style={{ background: "color-mix(in srgb, var(--rs-danger) 14%, transparent)", color: "var(--rs-danger)", border: "1px solid color-mix(in srgb, var(--rs-danger) 40%, transparent)" }}
               >
                 {error}
               </p>
@@ -118,7 +113,6 @@ export function LoginPage() {
               variant="primary"
               size="lg"
               loading={submitting}
-              style={{ background: "#0e7490" }}
             >
               Sign in
             </Button>

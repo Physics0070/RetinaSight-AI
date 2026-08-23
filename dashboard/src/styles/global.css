@@ -26,10 +26,38 @@
     transition: background var(--rs-duration) var(--rs-ease);
   }
 
+  /* Ambient light behind every surface. Fixed so it does not scroll with
+     content — the glass moves across a stationary light source, which is what
+     makes the depth read as physical rather than painted on. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background: var(--rs-ambient);
+    pointer-events: none;
+  }
+
+  /* A faint grid, far below the glass. Gives the blur something to refract and
+     keeps large empty areas from looking like flat colour. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(color-mix(in srgb, var(--rs-line) 55%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--rs-line) 55%, transparent) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
   h1, h2, h3, h4 {
     line-height: 1.2;
     font-weight: 650;
-    letter-spacing: -0.011em;
+    letter-spacing: -0.014em;
   }
 
   /* Visible, consistent focus for keyboard users everywhere. */
@@ -40,31 +68,91 @@
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--rs-accent) 30%, transparent);
+    background: color-mix(in srgb, var(--rs-accent) 32%, transparent);
+  }
+
+  /* Slim, unobtrusive scrollbars so chrome does not compete with the imagery. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--rs-ink-subtle) 45%, transparent) transparent;
+  }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--rs-ink-subtle) 35%, transparent);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
   }
 }
 
 @layer components {
-  /* --- shared surface materials, parameterised by the role tokens --- */
+  /* ---------------------------------------------------------------------- */
+  /* Glass panel — the core material                                        */
+  /* ---------------------------------------------------------------------- */
   .rs-panel {
+    position: relative;
     background: var(--rs-surface-raised);
     border: 1px solid var(--rs-line);
     border-radius: var(--rs-radius-lg);
     box-shadow: var(--rs-shadow-raised);
+    backdrop-filter: blur(var(--rs-glass-blur)) saturate(var(--rs-glass-saturate));
+    -webkit-backdrop-filter: blur(var(--rs-glass-blur)) saturate(var(--rs-glass-saturate));
+    transition:
+      border-color var(--rs-duration) var(--rs-ease),
+      transform var(--rs-duration) var(--rs-ease),
+      box-shadow var(--rs-duration) var(--rs-ease);
   }
 
-  /* Glass is applied only in the dark role themes, where it reads as
-     instrument chrome rather than decoration. */
-  [data-role="doctor"] .rs-panel,
-  [data-role="admin"] .rs-panel {
-    backdrop-filter: blur(14px) saturate(1.25);
-    -webkit-backdrop-filter: blur(14px) saturate(1.25);
+  /* Specular sheen across the top edge — a real pane catches the light. */
+  .rs-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.22),
+      rgba(255, 255, 255, 0.02) 38%,
+      transparent 65%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Interactive panels lift slightly and warm their edge on hover. */
+  .rs-panel-interactive:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--rs-accent) 45%, var(--rs-line));
+    box-shadow: var(--rs-shadow-panel);
   }
 
   .rs-inset {
     background: var(--rs-surface-sunken);
+    border: 1px solid color-mix(in srgb, var(--rs-line) 70%, transparent);
     border-radius: var(--rs-radius-md);
     box-shadow: var(--rs-shadow-sunken);
+  }
+
+  /* Edge-lit accent rail, used to mark urgency on a queue row. */
+  .rs-rail {
+    position: relative;
+    overflow: hidden;
+  }
+  .rs-rail::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--rs-rail-color, var(--rs-accent));
+    box-shadow: 0 0 18px var(--rs-rail-color, var(--rs-accent));
   }
 
   .rs-label {
@@ -80,7 +168,14 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Skip link for keyboard and screen-reader users. */
+  /* Large figures read as instrument readouts rather than body copy. */
+  .rs-readout {
+    font-family: var(--rs-font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    text-shadow: 0 0 24px color-mix(in srgb, var(--rs-accent) 30%, transparent);
+  }
+
   .rs-skip-link {
     position: absolute;
     left: -9999px;
@@ -103,7 +198,7 @@
   }
 }
 
-/* --- motion --- */
+/* --- motion ------------------------------------------------------------- */
 @keyframes rs-scan {
   0% { transform: translateY(-100%); opacity: 0; }
   12% { opacity: 1; }
@@ -118,8 +213,8 @@
 }
 
 @keyframes rs-reveal {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 
 @keyframes rs-sync-flow {
@@ -127,7 +222,23 @@
   to { background-position: 28px 0; }
 }
 
-/* Respect the user's motion preference — animations are decoration, never
+/* Slow drift of the ambient light — barely perceptible, but stops a mostly
+   static dark screen from feeling dead. */
+@keyframes rs-ambient-drift {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.82; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body::before {
+    animation: rs-ambient-drift 18s ease-in-out infinite;
+  }
+  .rs-panel {
+    animation: rs-reveal var(--rs-duration) var(--rs-ease) both;
+  }
+}
+
+/* Respect the user's motion preference — animation is decoration here, never
    the only channel carrying information. */
 @media (prefers-reduced-motion: reduce) {
   *,
