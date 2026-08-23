@@ -1,0 +1,65 @@
+# --- Secrets / env ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Local databases / storage (dev only) ---
+*.sqlite3
+*.db
+backend/var/
+var/
+storage/
+object-store/
+
+# --- Node / frontend ---
+node_modules/
+dashboard/dist/
+dashboard/.vite/
+*.local
+
+# --- Flutter / Dart ---
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins*
+mobile/.packages
+
+# --- ML artifacts ---
+# Datasets are never committed: they are patient images and licence-bound.
+ml/data/
+# Training checkpoints are large and reproducible from the pipeline.
+ml/models/**/*.pt
+ml/models/**/*.pth
+*.tflite
+ml/*.log
+# The servable model IS committed (16 MB) so the repo is runnable end-to-end.
+# Everything else under models/ is a build artefact.
+ml/models/*
+!ml/models/dr-v1.onnx
+!ml/models/dr-v1.json
+
+# --- local tooling ---
+mobile/.flutter-plugins-dependencies
+mobile/pubspec.lock
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

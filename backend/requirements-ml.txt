@@ -1,0 +1,14 @@
+# RetinaSight AI — OPTIONAL heavy ML dependencies.
+# Only needed to run the real (non-development) model/preprocessing providers.
+# Install with:  pip install -r requirements-ml.txt
+#
+# NOTE: torch wheels are large. Choose the build matching your platform/CUDA from
+# https://pytorch.org/get-started/locally/ if you need GPU support.
+
+-r requirements.txt
+
+torch>=2.2
+torchvision>=0.17
+onnxruntime>=1.17
+opencv-python-headless>=4.9
+scikit-learn>=1.4
