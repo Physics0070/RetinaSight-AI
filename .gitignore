@@ -1,17 +1,25 @@
+# NOTE ON PATTERNS
+# A bare `name/` here matches a directory called `name` at ANY depth, not just
+# at the repository root. That is how `storage/` — meant for a dev object store
+# — silently excluded `backend/app/storage/`, the entire object-storage module,
+# from the repository: a fresh clone could not import the backend at all.
+# Anchor directory rules with a leading slash unless they genuinely need to
+# match at every level. `backend/tests/test_repo_completeness.py` enforces this.
+
 # --- Secrets / env ---
 .env
 .env.*
 !.env.example
 *.pem
 *.key
-secrets/
+/secrets/
 
 # --- Python ---
 __pycache__/
 *.py[cod]
 .venv/
 venv/
-env/
+/env/
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
@@ -22,10 +30,7 @@ htmlcov/
 # --- Local databases / storage (dev only) ---
 *.sqlite3
 *.db
-backend/var/
-var/
-storage/
-object-store/
+/var/
 
 # --- Node / frontend ---
 node_modules/
