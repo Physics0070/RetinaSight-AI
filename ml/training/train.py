@@ -56,7 +56,8 @@ class TrainingConfig:
     balance: bool = True
     amp: bool = True
     num_workers: int = 4
-    patience: int = 6
+    patience: int = 10
+    selection_metric: str = "quadratic_kappa"
     # Ordinal term: penalises distant errors, which is what kappa measures.
     distance_weight: float = 0.5
     # Predict by rounding the expected grade rather than taking the argmax.
@@ -253,10 +254,13 @@ def train(config: TrainingConfig) -> Path:
             }
         )
 
-        # Macro-F1 rather than accuracy: it cannot be gamed by ignoring the
-        # rare, clinically important severe classes.
-        if val_metrics["macro_f1"] > best_score:
-            best_score = val_metrics["macro_f1"]
+        # Selection metric: quadratic kappa. It is the metric this task is
+        # judged on, it cannot be gamed by ignoring the rare severe classes
+        # (distance is penalised), and it is markedly more stable than macro-F1,
+        # which swings on a 28-sample validation class.
+        selection_score = val_metrics[config.selection_metric]
+        if selection_score > best_score:
+            best_score = selection_score
             epochs_without_improvement = 0
             torch.save(
                 {
@@ -266,7 +270,8 @@ def train(config: TrainingConfig) -> Path:
                     "classes": list(CLASS_NAMES),
                     "image_size": config.image_size,
                     "epoch": epoch,
-                    "val_macro_f1": best_score,
+                    "val_selection_score": best_score,
+                    "selection_metric": config.selection_metric,
                     "expected_grade_decision": config.expected_grade_decision,
                 },
                 output_dir / "best.pt",
@@ -303,7 +308,7 @@ def train(config: TrainingConfig) -> Path:
     (output_dir / "config.json").write_text(json.dumps(asdict(config), indent=2), encoding="utf-8")
 
     total = time.time() - started
-    print(f"\nFinished in {total / 60:.1f} min. Best validation macro-F1: {best_score:.4f}")
+    print(f"\nFinished in {total / 60:.1f} min. Best validation {config.selection_metric}: {best_score:.4f}")
     print(f"Checkpoint: {output_dir / 'best.pt'}")
     print(
         "\nThese are development metrics on a held-out split.\n"
@@ -325,7 +330,9 @@ def parse_args() -> TrainingConfig:
     parser.add_argument("--val-fraction", type=float, default=0.15)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num-workers", type=int, default=4)
-    parser.add_argument("--patience", type=int, default=6)
+    parser.add_argument("--patience", type=int, default=10)
+    parser.add_argument("--selection-metric", default="quadratic_kappa",
+                        choices=["quadratic_kappa", "macro_f1", "accuracy"])
     parser.add_argument("--no-balance", action="store_true")
     parser.add_argument("--no-amp", action="store_true")
     parser.add_argument("--distance-weight", type=float, default=0.5,
@@ -346,6 +353,7 @@ def parse_args() -> TrainingConfig:
         seed=args.seed,
         num_workers=args.num_workers,
         patience=args.patience,
+        selection_metric=args.selection_metric,
         balance=not args.no_balance,
         distance_weight=args.distance_weight,
         expected_grade_decision=not args.argmax_decision,

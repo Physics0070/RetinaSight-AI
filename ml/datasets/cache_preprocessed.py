@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -40,7 +41,10 @@ from datasets.retinal_dataset import (  # noqa: E402
 )
 
 
-def _process(job: tuple[str, str, int]) -> bool:
+def _process(job: tuple[str, str, int]) -> tuple[bool, str]:
+    """Returns (ok, reason). The reason is reported rather than swallowed —
+    silently dropping training images skews the class balance and invalidates
+    any comparison against a differently-cached run."""
     source, destination, size = job
     try:
         with Image.open(source) as handle:
@@ -50,9 +54,9 @@ def _process(job: tuple[str, str, int]) -> bool:
         # PNG keeps the cache lossless; re-compressing to JPEG would introduce
         # artefacts the served model never sees.
         Image.fromarray(resized).save(destination, format="PNG", compress_level=1)
-        return True
-    except Exception:  # noqa: BLE001
-        return False
+        return True, ""
+    except Exception as exc:  # noqa: BLE001
+        return False, f"{type(exc).__name__}: {exc}"
 
 
 def main() -> None:
@@ -84,11 +88,13 @@ def main() -> None:
         print(f"\nPreprocessing {len(jobs)} images at {args.image_size}px "
               f"across {args.workers} workers…")
         started = time.time()
-        failures = 0
+        reasons: list[str] = []
         with ProcessPoolExecutor(max_workers=args.workers) as pool:
-            for done, ok in enumerate(pool.map(_process, jobs, chunksize=16), start=1):
+            for done, (ok, reason) in enumerate(
+                pool.map(_process, jobs, chunksize=16), start=1
+            ):
                 if not ok:
-                    failures += 1
+                    reasons.append(reason)
                 if done % 250 == 0 or done == len(jobs):
                     rate = done / max(time.time() - started, 1e-6)
                     remaining = (len(jobs) - done) / max(rate, 1e-6)
@@ -96,17 +102,25 @@ def main() -> None:
 
         elapsed = time.time() - started
         print(f"\n  finished in {elapsed:.0f}s")
-        if failures:
-            print(f"  WARNING: {failures} images could not be processed")
+        if reasons:
+            print(f"  {len(reasons)} images could not be processed. Causes:")
+            for cause, count in Counter(reasons).most_common(5):
+                print(f"    {count:>4}x  {cause[:110]}")
 
     cached = discover_samples(output)
     print(f"\nCache: {len(cached)} images at {output}")
     print(f"  distribution: {class_distribution(cached)}")
 
     if len(cached) != len(samples):
-        print(
-            f"\n  WARNING: cache has {len(cached)} images but the source had "
-            f"{len(samples)}. Investigate before training."
+        # Exit non-zero so a scripted pipeline halts here. An incomplete cache
+        # skews the class balance and invalidates any comparison against a
+        # differently-cached run — this warning was previously easy to scroll
+        # past and train on regardless.
+        raise SystemExit(
+            f"\n  INCOMPLETE CACHE: {len(cached)} images cached, {len(samples)} in "
+            f"the source ({len(samples) - len(cached)} missing).\n"
+            "  Re-run with fewer --workers; failures here are usually memory\n"
+            "  pressure rather than unreadable files. Do not train on this cache."
         )
 
     print("\nTrain on the cache:")

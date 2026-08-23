@@ -6,7 +6,7 @@ retinal imaging — built around the realities of rural and low-connectivity car
 > **Scope.** RetinaSight AI is a *screening and referral-support* system. It is
 > **not** an autonomous diagnostic device. Every screening is reviewed by a
 > qualified clinician, and no clinical-performance claim is made anywhere in
-> this repository, because none has been measured.
+> this repository beyond what has actually been measured.
 
 ```
 PATIENT → GUIDED CAPTURE → QUALITY GATE → AI SCREENING → DR CLASSIFICATION
@@ -19,45 +19,47 @@ and a clinician who stays in the loop by design.
 
 ---
 
-## What is here
+## Status
+
+```
+264 tests passing    133 backend · 74 frontend · 31 ML · 26 mobile
+Scanner              188 files, no hardcoded config or secrets
+Trained model        quadratic kappa 0.885 · referable sensitivity 0.891
+```
 
 | Component | Stack | Status |
 |---|---|---|
-| `backend/` | FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL | **122 tests passing** |
-| `dashboard/` | React 18 · TypeScript · Vite · Tailwind | **44 tests passing**, builds clean |
-| `ml/` | PyTorch training · evaluation · ONNX export | Pipeline complete; **no dataset shipped** |
-| `mobile/` | Flutter · SQLCipher · camera | Written; **not compiled** (see caveat) |
-| `scripts/` | Hardcoding & secret scanner | **149 files scanned, clean** |
-| `docs/` | Architecture, API, security, ML, sync | — |
-
-### Honest status
-
-- **The ML model is a labelled placeholder.** `DevelopmentModelProvider`
-  produces deterministic, structurally valid output so the pipeline can be
-  exercised end to end. It carries **no diagnostic meaning**, is flagged
-  `is_development_model` on every response, and surfaces an unmissable
-  "NOT FOR CLINICAL USE" banner in the UI. Marking a model *validated* without
-  accompanying metrics is **rejected by the API**.
-- **The Flutter app has not been compiled.** No Dart SDK was available in the
-  build environment. The source is complete and its logic mirrors the tested
-  backend state machine, but treat it as unverified until you run
-  `flutter analyze && flutter test`.
-- **Nothing is deployed.** Deployment configuration was deliberately left out
-  of this pass.
+| `backend/` | FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL | 60 endpoints, 133 tests |
+| `dashboard/` | React 18 · TypeScript · Vite · Tailwind | 4 portals, 74 tests |
+| `ml/` | PyTorch · ONNX · Grad-CAM | trained model included |
+| `mobile/` | Flutter · SQLCipher · camera | analyzes clean, 26 tests |
+| `scripts/` | hardcoding & secret scanner | runs inside the test suite |
 
 ---
 
-## Prerequisites
+## The interface
 
-| Tool | Version | Needed for |
-|---|---|---|
-| Python | 3.11+ | backend, ML pipeline |
-| Node.js | 20+ | dashboard |
-| PostgreSQL | 14+ | production database (SQLite is used for local dev) |
-| Flutter | 3.19+ | mobile app only |
+Futuristic clinical glass: a deep vitreous ground with frosted, edge-lit panels
+in the palette of retinal imaging. Depth comes from three layers — **fixed**
+ambient light, a masked lattice for the blur to refract, and a specular top edge
+on each pane. Keeping the light source fixed while the glass scrolls is what
+makes the depth read as physical rather than painted on.
 
-Heavy ML dependencies (PyTorch, ONNX Runtime, OpenCV) are **optional** — the
-backend runs fully without them.
+Four workspaces share the material but differ in accent and density, because the
+work differs:
+
+| Role | Route | Accent | Character |
+|---|---|---|---|
+| Health worker | `/user/*` | teal | highest contrast — used outdoors, one-handed |
+| Doctor | `/doctor/*` | cyan | darkest ground — images judged against darkness |
+| Patient | `/patient/*` | warm amber | lightest, gentler blur, larger type |
+| Admin | `/admin/*` | indigo | densest, monitoring-oriented |
+
+**Contrast is enforced by test, not by eye.** Translucency makes legibility easy
+to break invisibly — one such bug shipped and was caught only by measuring in the
+browser (a Tailwind arbitrary class silently failed to emit, leaving white text
+on a bright accent at ratio 1.58). 30 tests now compute real WCAG ratios for
+every theme. See [UI_DESIGN_SYSTEM.md](docs/UI_DESIGN_SYSTEM.md).
 
 ---
 
@@ -81,26 +83,21 @@ separate generated values.
 ### 2. Backend
 
 ```bash
-cd backend
-python -m venv .venv
-.venv/Scripts/pip install -r requirements.txt
+cd backend && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
 ```
 
-On macOS/Linux use `.venv/bin/pip` instead.
-
-Create the schema, seed the RBAC policy and bootstrap an administrator:
+On macOS/Linux use `.venv/bin/pip`. Then create the schema, seed the RBAC policy
+and bootstrap an administrator:
 
 ```bash
 cd backend && python -m scripts.init_db
 ```
 
-Run it:
-
 ```bash
 cd backend && python -m uvicorn app.main:app --reload
 ```
 
-API docs are then at `http://localhost:8000/docs`, health at `/health`.
+API docs at `http://localhost:8000/docs`, health at `/health`.
 
 ### 3. Dashboard
 
@@ -108,10 +105,27 @@ API docs are then at `http://localhost:8000/docs`, health at `/health`.
 cd dashboard && npm install && npm run dev
 ```
 
-Opens on `http://localhost:5173`. Sign in with the bootstrap administrator from
-`RS_SEED_ADMIN_EMAIL` / `RS_SEED_ADMIN_PASSWORD`.
+Opens on **http://localhost:5173**.
 
-### 4. Mobile (optional)
+### 4. A runnable demo (optional)
+
+Seeds a clinic, staff, patients and completed screenings through the *real*
+workflow — consent, quality gate, inference, Grad-CAM, risk and referral all
+genuinely run, using real retinal images.
+
+```bash
+cd backend && python ../scripts/seed_demo.py
+```
+
+| Role | Email | Password |
+|---|---|---|
+| Doctor | `doctor@retinasight.ai` | `DemoPassw0rd!2026` |
+| Health worker | `worker@retinasight.ai` | `DemoPassw0rd!2026` |
+| Admin | `admin@retinasight.ai` | from `RS_SEED_ADMIN_PASSWORD` |
+
+Clearly labelled synthetic data; the script refuses to run in production.
+
+### 5. Mobile (optional)
 
 ```bash
 cd mobile && flutter pub get && flutter run --dart-define=RS_API_BASE_URL=http://10.0.2.2:8000/api/v1
@@ -121,97 +135,113 @@ cd mobile && flutter pub get && flutter run --dart-define=RS_API_BASE_URL=http:/
 
 ---
 
-## Database
+## The model
 
-Local development defaults to **SQLite** so there is nothing to install. Production
-uses **PostgreSQL** — the models are written portably and the same migrations
-apply to both.
+A trained EfficientNet-B0 is included (`ml/models/dr-v1.onnx`, 16 MB), so the
+repository is runnable end to end.
 
-```bash
-# point at PostgreSQL
-export RS_DATABASE_URL="postgresql+psycopg://user:password@host:5432/retinasight"
+**Measured on 546 held-out APTOS 2019 images:**
 
-cd backend && python -m alembic upgrade head
-```
+| Metric | Value |
+|---|---|
+| **Quadratic weighted kappa** | **0.885** |
+| **Referable-DR sensitivity** | **0.891** |
+| Referable-DR specificity | 0.969 |
+| Accuracy | 0.846 |
+| Macro F1 | 0.707 |
 
-Migrations live in `backend/migrations/`. They are generated with
-`alembic revision --autogenerate -m "description"` and reviewed before commit.
+**Read these honestly.** Accuracy is the weakest of the five: 49% of APTOS is
+grade 0, so predicting "no DR" for everything scores 49% while being clinically
+useless. Kappa is the headline because the grades are ordinal — confusing *no DR*
+with *proliferative* is far worse than *mild* with *moderate*, and kappa
+penalises by squared distance.
 
----
+**Per-class recall:** no DR 0.99 · mild 0.82 · moderate 0.76 · **severe 0.43** ·
+proliferative 0.57.
 
-## Object storage
+Severe recall of 0.43 means the model misses more than half of severe cases, on
+28 validation examples. That gap is exactly why the risk engine forces clinician
+review on every case rather than trusting model confidence.
 
-Retinal images are patient data. They never sit in the database and are never
-publicly reachable:
+> These are **development metrics on a held-out split** — not clinical
+> validation. The model is registered as `not_validated`, and the API rejects a
+> "validated" status submitted without evidence.
 
-- **Development:** local filesystem, served only through short-lived
-  HMAC-signed URLs.
-- **Production:** any S3-compatible bucket (AWS, Cloudflare R2, MinIO,
-  Backblaze), written with a private ACL and read through presigned URLs.
+### Training your own
 
-The backend **refuses to start** in production with filesystem storage, because
-a container filesystem is ephemeral and patient images would be lost on deploy.
-
----
-
-## Training a model
-
-The system ships with a labelled development placeholder active — **no trained
-weights are included**, and no retinal dataset is bundled (the public ones are
-license-gated; see [ml/README.md](ml/README.md) for how to obtain them).
+No dataset ships here; the public DR datasets are licence-gated. See
+[ml/README.md](ml/README.md) and
+[TRAINING_A_REAL_MODEL.md](docs/TRAINING_A_REAL_MODEL.md).
 
 ```bash
 cd ml
 
-# Verify the pipeline end-to-end without a real dataset
+# Verify the pipeline without a real dataset
 python -m datasets.make_synthetic --output data/synthetic --per-class 60
 python -m training.train --data-dir data/synthetic --epochs 5
 
-# Train on real data
-python -m training.train --data-dir data/aptos --epochs 20 --arch efficientnet_b0
-python -m evaluation.evaluate --checkpoint models/<run>/best.pt --data-dir data/aptos
-python -m export.to_onnx --checkpoint models/<run>/best.pt --output models/dr-v1.onnx
+# Real data
+python -m datasets.prepare_aptos --data-dir data/aptos
+python -m datasets.cache_preprocessed --data-dir data/aptos --output data/aptos_456 --image-size 456
+python -m training.train --data-dir data/aptos_456 --image-size 456 --batch-size 8
+python -m evaluation.evaluate --checkpoint models/<run>/best.pt --data-dir data/aptos_456
+python -m export.to_onnx --checkpoint models/<run>/best.pt --output models/dr-v2.onnx
 ```
 
-Training imports its preprocessing directly from the serving code, so there is
-no train/serve skew. Loss is class-weighted by default (DR datasets are ~75%
-grade 0) and the best checkpoint is chosen on macro-F1, not accuracy.
+Three choices that matter more than the architecture:
+
+1. **Preprocessing is imported from the serving code**, not reimplemented, so
+   there is no train/serve skew. A test asserts they are the same objects.
+2. **Class-weighted, ordinal-aware loss.** DR datasets are ~75% grade 0, and
+   plain cross-entropy ignores the ordering the metric cares about.
+3. **Checkpoint selection on kappa**, the metric the task is judged by. Selecting
+   on macro-F1 — which swings on a 28-sample class — cost a measurably better
+   checkpoint in testing.
+
+**Single runs are not evidence here.** `evaluation/compare_runs.py` runs a
+configuration across seeds and reports mean ± spread, because the run-to-run
+variance on this validation set is larger than most improvements worth claiming.
 
 ### Serving it
 
-1. Install the ML extras: `pip install -r backend/requirements-ml.txt`
-2. Place the artefact in `RS_MODEL_DIR` (`.onnx` or `.pt`)
-3. Register it in **Admin → Models**, paste the measured numbers from
-   `metrics.json`, then advance `REGISTER → VALIDATE → DEPLOY → ACTIVE`
+1. `pip install -r backend/requirements-ml.txt`
+2. Put the artefact in `RS_MODEL_DIR` (defaults to `ml/models`)
+3. `python scripts/register_trained_model.py`, or **Admin → Models**
 
-If a real model is configured but cannot be loaded, the system reports
+If a real model is configured but cannot load, the system reports
 **MODEL NOT AVAILABLE** — it never silently falls back to placeholder output.
 
-> Held-out metrics are a development signal, not clinical validation. Register
-> a newly trained model as `not_validated` and leave it there until real
-> prospective validation exists. The API rejects a "validated" status submitted
-> without accompanying metrics.
+---
+
+## Database
+
+Local development defaults to **SQLite** (nothing to install). Production uses
+**PostgreSQL**; the models are portable and the same migrations apply to both.
+
+```bash
+export RS_DATABASE_URL="postgresql+psycopg://user:password@host:5432/retinasight"
+cd backend && python -m alembic upgrade head
+```
+
+## Object storage
+
+Retinal images are patient data. They never sit in the database and are never
+publicly reachable — local filesystem in development, any S3-compatible bucket in
+production, both read only through short-lived signed URLs.
+
+The backend **refuses to start** in production with filesystem storage: a
+container filesystem is ephemeral, so patient images would be lost on deploy.
 
 ---
 
 ## Testing
 
 ```bash
-cd backend && python -m pytest
-```
-
-```bash
-cd dashboard && npm test
-```
-
-```bash
-cd mobile && flutter test
-```
-
-Hardcoding, secret and Firebase scan:
-
-```bash
-python scripts/check_no_hardcoding.py --verbose
+cd backend    && python -m pytest          # 133
+cd dashboard  && npm test                  # 74
+cd ml         && python -m pytest tests/   # 31
+cd mobile     && flutter test              # 26
+python scripts/check_no_hardcoding.py
 ```
 
 ---
@@ -225,11 +255,11 @@ python scripts/check_no_hardcoding.py --verbose
 | [DATABASE.md](docs/DATABASE.md) | Entities, relationships, migrations |
 | [ML_PIPELINE.md](docs/ML_PIPELINE.md) | Preprocessing, quality gate, inference, Grad-CAM |
 | [OFFLINE_SYNC.md](docs/OFFLINE_SYNC.md) | Offline-first design and idempotent sync |
-| [SECURITY.md](docs/SECURITY.md) | Authentication, storage, auditing, threat notes |
+| [SECURITY.md](docs/SECURITY.md) | Authentication, storage, auditing, known gaps |
 | [RBAC.md](docs/RBAC.md) | Roles, permissions, enforcement model |
-| [UI_DESIGN_SYSTEM.md](docs/UI_DESIGN_SYSTEM.md) | Tokens, contextual morphism, accessibility |
+| [UI_DESIGN_SYSTEM.md](docs/UI_DESIGN_SYSTEM.md) | Glass material, tokens, contrast, accessibility |
 | [TESTING.md](docs/TESTING.md) | What is tested and how to extend it |
-| **[TRAINING_A_REAL_MODEL.md](docs/TRAINING_A_REAL_MODEL.md)** | **Step-by-step: getting a real trained model into the system** |
+| **[TRAINING_A_REAL_MODEL.md](docs/TRAINING_A_REAL_MODEL.md)** | **Getting a trained model into the system** |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Render blueprint, environment setup, rollback |
 
 ---
@@ -238,28 +268,19 @@ python scripts/check_no_hardcoding.py --verbose
 
 ```
 retinasight-ai/
-├── backend/          FastAPI service, ML pipeline, migrations, tests
-│   ├── app/
-│   │   ├── api/          routers + authorization dependencies
-│   │   ├── core/         config, security, logging, errors
-│   │   ├── db/           engine, session, declarative base
-│   │   ├── domain/       enums, RBAC matrix, config defaults
-│   │   ├── ml/           preprocessing, quality, providers, Grad-CAM
-│   │   ├── models/       SQLAlchemy entities
-│   │   ├── repositories/ data access
-│   │   ├── schemas/      Pydantic contracts
-│   │   ├── services/     business logic
-│   │   └── storage/      object-storage providers
-│   ├── migrations/   Alembic
-│   └── tests/
+├── backend/          FastAPI service, ML serving, migrations, tests
+│   └── app/
+│       ├── api/          routers + authorization dependencies
+│       ├── core/         config, security, logging, errors, rate limiting
+│       ├── domain/       enums, RBAC matrix, config defaults
+│       ├── ml/           preprocessing, quality gate, providers, Grad-CAM
+│       ├── models/       SQLAlchemy entities
+│       ├── services/     business logic
+│       └── storage/      object-storage providers
 ├── dashboard/        React portals (admin · health worker · patient · doctor)
-│   └── src/
-│       ├── app/           shell, routing, guards
-│       ├── design-system/ tokens, primitives, imaging, risk
-│       ├── lib/           API client, auth, types
-│       └── portals/       one directory per role
+├── ml/               training, evaluation, ONNX export, calibration
 ├── mobile/           Flutter health-worker app (offline-first)
-├── scripts/          hardcoding scanner, utilities
+├── scripts/          scanner, seeding, model registration
 └── docs/
 ```
 
@@ -267,15 +288,16 @@ retinasight-ai/
 
 ## Clinical safety notes
 
-These are enforced in code and covered by tests, not just documented:
+Enforced in code and covered by tests, not just documented:
 
 1. **Consent gates screening.** A session cannot start without recorded consent.
 2. **The quality gate is a hard precondition.** A rejected image never reaches
-   the model.
-3. **A clinician reviews every screening.** This is a product invariant, not a
-   per-case setting.
-4. **Administration ≠ clinical authority.** Platform admins do not hold
-   `CLINICAL_REVIEW`; only a doctor signs off a case.
+   the model — and the gate is calibrated against *real* fundus photographs, not
+   synthetic approximations.
+3. **A clinician reviews every screening.** A product invariant, not a setting.
+4. **Administration ≠ clinical authority.** Admins do not hold `CLINICAL_REVIEW`.
 5. **Low confidence raises risk.** It never lowers it.
-6. **Grad-CAM is not a lesion detector.** Its interpretive caveat travels with
-   every explanation the API returns.
+6. **Grad-CAM is not a lesion detector.** Its caveat travels with every
+   explanation the API returns.
+7. **Severity is never signalled by colour alone** — glyph, label and scale
+   position all carry it.
