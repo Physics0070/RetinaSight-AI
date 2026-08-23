@@ -169,6 +169,7 @@ def main() -> None:
         reviews = ReviewService(db)
 
         created = 0
+        portal_patient = None
         for name, diabetic, years, grade in DEMO_PATIENTS:
             patient = patients.register(
                 full_name=name,
@@ -224,8 +225,27 @@ def main() -> None:
             except Exception as exc:  # noqa: BLE001
                 print(f"  {name:<20} screening incomplete: {exc}")
 
+            # Give the first patient a portal login. Without one the patient
+            # workspace cannot be signed into at all, so a quarter of the
+            # product was unreachable in the demo.
+            if portal_patient is None:
+                portal_patient = patient
+
             created += 1
             print()
+
+        if portal_patient is not None:
+            portal_user = create_user(
+                db,
+                email="patient@retinasight.ai",
+                name=portal_patient.full_name,
+                role=RoleName.PATIENT,
+            )
+            # The link the API resolves a signed-in patient through; without it
+            # the account authenticates but can see no record of its own.
+            portal_patient.portal_user_id = portal_user.id
+            db.commit()
+            print(f"patient portal: {portal_user.email} -> {portal_patient.full_name}\n")
 
         print(f"\n{created} demo patients screened.")
         source = (
@@ -237,6 +257,8 @@ def main() -> None:
         print(f"  admin   {settings.seed_admin_email} / {settings.seed_admin_password}")
         print(f"  worker  worker@retinasight.ai / {DEMO_PASSWORD}")
         print(f"  doctor  doctor@retinasight.ai / {DEMO_PASSWORD}")
+        if portal_patient is not None:
+            print(f"  patient patient@retinasight.ai / {DEMO_PASSWORD}")
         print(f"\n  (demo password {source})")
 
 
