@@ -11,12 +11,13 @@ Render injects an unprefixed ``PORT``; the process entrypoint prefers it over
 
 from __future__ import annotations
 
+import os
 import re
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, computed_field
+from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Repository root: app/core/config.py -> core -> app -> backend -> repo.
@@ -42,6 +43,75 @@ class Environment(str, Enum):
     production = "production"
 
 
+#: Substrings marking a value as a documented placeholder rather than a real
+#: setting. Production refuses to start on any of them.
+PLACEHOLDER_MARKERS = ("change-me", "changeme", "dev-only", "placeholder", "your-")
+
+#: Settings that have no safe default and must be supplied per deployment.
+REQUIRED_IN_PRODUCTION = (
+    "database_url",
+    "jwt_secret",
+    "jwt_refresh_secret",
+    "storage_signing_secret",
+    "public_base_url",
+    "cors_origins",
+)
+
+
+@lru_cache(maxsize=1)
+def example_values() -> dict[str, str]:
+    """The values published in ``.env.example``, keyed by variable name.
+
+    Production rejects any required setting still equal to one of these.
+
+    This is what makes the placeholder check order-independent. ``_env_files``
+    decides whether to read the example file when the class is *defined*, which
+    is correct when RS_ENV comes from the real environment but wrong if the
+    variable is set later in-process. Comparing against the published values
+    catches the leak regardless of how it happened, and it also catches
+    placeholders that carry none of the PLACEHOLDER_MARKERS substrings — the
+    localhost CORS origins, for instance, which look like ordinary settings.
+    """
+    path = REPO_ROOT / ".env.example"
+    values: dict[str, str] = {}
+    if not path.is_file():
+        return values
+
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        # The file documents settings with trailing inline comments.
+        value = value.split("#", 1)[0].strip()
+        if value:
+            values[key.strip().upper()] = value
+    return values
+
+
+def _env_files() -> tuple[Path, ...]:
+    """Environment files, lowest precedence first.
+
+    ``.env.example`` is read as the *lowest* precedence source outside
+    production. That is what lets this module declare no environment values of
+    its own: the development defaults that used to sit here as string literals
+    (localhost URLs, dev secrets, the SQLite path) now live only in the example
+    file, where they are documentation rather than code, and a fresh clone
+    still runs with no setup step.
+
+    It is deliberately NOT read in production. Silently falling back to a
+    published placeholder secret is far worse than refusing to start, and
+    :meth:`Settings.model_post_init` enforces that refusal.
+
+    Paths are anchored to the repository root so the same files are found
+    whether the process starts from the repo root or from backend/.
+    """
+    deployment = (REPO_ROOT / ".env", REPO_ROOT / "backend" / ".env")
+    if os.environ.get("RS_ENV", "").strip().lower() == Environment.production.value:
+        return deployment
+    return (REPO_ROOT / ".env.example", *deployment)
+
+
 class StorageProvider(str, Enum):
     local = "local"
     s3 = "s3"
@@ -56,11 +126,18 @@ class ModelProvider(str, Enum):
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="RS_",
-        env_file=(".env", "../.env"),
+        env_file=_env_files(),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
     )
+
+    # Every field below whose value is environment-specific declares an EMPTY
+    # default. The real development values live in .env.example (see
+    # _env_files); production must supply them explicitly. Fields that are
+    # genuine protocol/format constants rather than deployment settings keep
+    # their literal — an API prefix or a JWT algorithm is not a secret and does
+    # not vary by environment.
 
     # ---- runtime ----
     env: Environment = Environment.development
@@ -71,15 +148,15 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     api_prefix: str = "/api/v1"
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    cors_origins: str = ""
 
     # ---- database ----
-    database_url: str = "sqlite+pysqlite:///./var/retinasight_dev.sqlite3"
+    database_url: str = ""
     db_echo: bool = False
 
     # ---- auth / jwt ----
-    jwt_secret: str = "dev-only-insecure-access-secret-change-me"
-    jwt_refresh_secret: str = "dev-only-insecure-refresh-secret-change-me"
+    jwt_secret: str = ""
+    jwt_refresh_secret: str = ""
     jwt_algorithm: str = "HS256"
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 14
@@ -90,7 +167,7 @@ class Settings(BaseSettings):
     login_rate_limit_per_minute: int = 10
 
     # ---- public base URL (used to build signed URLs for the local provider) ----
-    public_base_url: str = "http://localhost:8000"
+    public_base_url: str = ""
 
     # ---- object storage ----
     storage_provider: StorageProvider = StorageProvider.local
@@ -98,7 +175,7 @@ class Settings(BaseSettings):
     storage_signed_url_ttl_seconds: int = 300
     # Dedicated signing key for local signed URLs (kept separate from JWT keys
     # so rotating one never silently invalidates the other).
-    storage_signing_secret: str = "dev-only-insecure-storage-signing-secret"
+    storage_signing_secret: str = ""
     storage_max_image_bytes: int = 15_000_000
     storage_allowed_mime_types: str = "image/jpeg,image/png,image/webp"
     s3_bucket: str | None = None
@@ -115,11 +192,11 @@ class Settings(BaseSettings):
     inference_mode: str = "sync"  # sync | worker
 
     # ---- seed (dev bootstrap only) ----
-    # NOTE: must be a routable-looking address — reserved TLDs (.local, .test,
-    # .example, .invalid) are rejected by email validation and would create an
-    # administrator account that can never sign in.
-    seed_admin_email: str = "admin@retinasight.ai"
-    seed_admin_password: str = "ChangeMe_Admin123!"
+    # NOTE: RS_SEED_ADMIN_EMAIL must be a routable-looking address — reserved
+    # TLDs (.local, .test, .example, .invalid) are rejected by email validation
+    # and would create an administrator account that can never sign in.
+    seed_admin_email: str = ""
+    seed_admin_password: str = ""
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -187,6 +264,45 @@ class Settings(BaseSettings):
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")
+
+    def model_post_init(self, _context: object) -> None:
+        """Refuse to run production on defaults or documented placeholders.
+
+        Reading .env.example outside production is what keeps environment
+        values out of this source file, but it also means an unset variable
+        degrades to a published placeholder instead of failing loudly. That is
+        acceptable on a developer's machine and unacceptable in production —
+        a service running on the JWT secret printed in a public example file
+        is trivially forgeable. This is the check that makes the trade safe.
+        """
+        if not self.is_production:
+            return
+
+        published = example_values()
+        problems: list[str] = []
+        for name in REQUIRED_IN_PRODUCTION:
+            value = str(getattr(self, name, "")).strip()
+            variable = f"RS_{name.upper()}"
+            if not value:
+                problems.append(f"{variable} is not set.")
+            elif value == published.get(variable):
+                problems.append(
+                    f"{variable} still holds the value published in .env.example."
+                )
+            elif any(marker in value.lower() for marker in PLACEHOLDER_MARKERS):
+                problems.append(f"{variable} still holds a placeholder value.")
+
+        # Reusing one secret for both token families means a stolen access
+        # token can be replayed as a refresh token.
+        if self.jwt_secret and self.jwt_secret == self.jwt_refresh_secret:
+            problems.append("RS_JWT_SECRET and RS_JWT_REFRESH_SECRET must differ.")
+
+        if problems:
+            raise ValueError(
+                "Refusing to start: insecure production configuration.\n  - "
+                + "\n  - ".join(problems)
+                + "\nSee .env.example for the full list of variables."
+            )
 
 
 @lru_cache(maxsize=1)

@@ -37,6 +37,8 @@ node_modules/
 dashboard/dist/
 dashboard/.vite/
 *.local
+# TypeScript incremental build state — a build artefact, not source.
+*.tsbuildinfo
 
 # --- Flutter / Dart ---
 mobile/.dart_tool/

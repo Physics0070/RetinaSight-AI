@@ -18,7 +18,9 @@ Usage:
 
 from __future__ import annotations
 
+import os
 import random
+import secrets
 import sys
 from pathlib import Path
 
@@ -46,7 +48,28 @@ from app.services.screening_service import ScreeningService
 
 logger = get_logger(__name__)
 
-DEMO_PASSWORD = "DemoPassw0rd!2026"
+def _demo_password() -> str:
+    """Password for the seeded demo accounts.
+
+    Taken from RS_DEMO_PASSWORD when set, otherwise generated fresh for this
+    run and printed at the end.
+
+    It used to be a literal in this file. A working credential committed to a
+    public repository is a working credential no matter how clearly it is
+    labelled "demo" — and this script seeds accounts with real clinical
+    permissions, so anyone who ran it against a reachable database inherited a
+    known password for a doctor account. Generating it means the repository
+    never contains one.
+    """
+    configured = os.environ.get("RS_DEMO_PASSWORD", "").strip()
+    if configured:
+        return configured
+    # token_urlsafe(18) is 24 characters, comfortably over the configured
+    # minimum length; the affixes guarantee mixed classes whatever it yields.
+    return f"Demo-{secrets.token_urlsafe(18)}-7"
+
+
+DEMO_PASSWORD = _demo_password()
 APTOS_CACHE = REPO_ROOT / "ml" / "data" / "aptos_224"  # cropped 224px cache
 
 # (name, age-ish context, diabetes years, which APTOS grade folder to draw from)
@@ -205,10 +228,16 @@ def main() -> None:
             print()
 
         print(f"\n{created} demo patients screened.")
+        source = (
+            "from RS_DEMO_PASSWORD"
+            if os.environ.get("RS_DEMO_PASSWORD", "").strip()
+            else "generated for this run — set RS_DEMO_PASSWORD to keep it stable"
+        )
         print("\nSign in with:")
         print(f"  admin   {settings.seed_admin_email} / {settings.seed_admin_password}")
         print(f"  worker  worker@retinasight.ai / {DEMO_PASSWORD}")
         print(f"  doctor  doctor@retinasight.ai / {DEMO_PASSWORD}")
+        print(f"\n  (demo password {source})")
 
 
 if __name__ == "__main__":

@@ -39,25 +39,69 @@ SKIP_DIRECTORIES = {
     "migrations",  # generated schema DDL, reviewed at generation time
 }
 
-# Files permitted to contain otherwise-flagged strings, with justification.
-ALLOWLIST: dict[str, str] = {
-    ".env.example": "documents required variables using placeholder values",
-    "dashboard/.env.example": "documents required frontend variables",
-    "backend/app/domain/config_defaults.py": "seeded default policy; runtime reads the database",
-    "backend/app/domain/rbac_matrix.py": "default security policy, deliberately version-controlled",
-    "scripts/check_no_hardcoding.py": "this scanner contains the patterns it searches for",
-    # Demo seeding uses known credentials by design so a reviewer can sign in.
-    # The script refuses to run when RS_ENV=production.
-    "scripts/seed_demo.py": "clearly-labelled synthetic demo data; refuses to run in production",
-    # These two files ARE the configuration layer. Their localhost values are
-    # development fallbacks that every deployment overrides via environment
-    # variables (RS_* / VITE_*); no other module may contain such a literal.
-    "backend/app/core/config.py": "configuration layer; localhost defaults are env-overridable",
-    "dashboard/src/lib/config.ts": "configuration layer; localhost default is env-overridable",
-    "mobile/lib/core/config.dart": "configuration layer; emulator-loopback default is --dart-define-overridable",
+# Narrow exemptions: a path is excused from NAMED RULES ONLY, never wholesale.
+#
+# This used to be a map of path -> reason that suppressed every rule for that
+# file. That is a hole rather than a policy: an allowlisted file could have
+# carried an AWS key, a private key or a Firebase import and the scan would
+# still have reported PASS. Each entry now names the specific rules it needs,
+# so every other rule still applies to it.
+#
+# The list is short because the underlying literals were removed rather than
+# excused — application configuration now lives in .env.example, which the
+# backend and Vite read as a lowest-precedence development fallback, and the
+# demo password is generated per run instead of committed.
+ALLOWLIST: dict[str, tuple[frozenset[str], str]] = {
+    "scripts/check_no_hardcoding.py": (
+        frozenset({"firebase"}),
+        "this scanner necessarily contains the patterns it searches for",
+    ),
+    ".env.example": (
+        frozenset({"localhost_url"}),
+        "the development defaults themselves; production never reads this file "
+        "and refuses to start on any value published here",
+    ),
+    "dashboard/.env.example": (
+        frozenset({"localhost_url"}),
+        "same, for the Vite build",
+    ),
+    # Exempted per FILE rather than by adding these rules to the whole tests/
+    # directory: a genuine Firebase import or a real DSN in any other test is
+    # still a violation worth failing on.
+    "backend/tests/test_no_hardcoding.py": (
+        frozenset({"firebase"}),
+        "the test asserting Firebase is absent must name it to search for it",
+    ),
+    "backend/tests/test_config_paths.py": (
+        frozenset({"postgres_dsn"}),
+        "fabricated DSN used to assert non-SQLite URLs pass through unchanged",
+    ),
 }
 
-ALLOWLISTED_DIRECTORIES = ("tests/", "test/", "__tests__/", "docs/")
+# Directories excused from named rules only, for the same reason as above.
+# Test fixtures legitimately hold throwaway passwords, loopback URLs and
+# threshold literals; nothing legitimately holds a cloud key or a private key,
+# so those rules keep applying inside tests and docs.
+ALLOWLISTED_DIRECTORIES: tuple[tuple[str, frozenset[str]], ...] = (
+    (
+        "tests/",
+        frozenset({"password_literal", "localhost_url", "hardcoded_url", "clinical_threshold"}),
+    ),
+    (
+        "test/",
+        frozenset({"password_literal", "localhost_url", "hardcoded_url", "clinical_threshold"}),
+    ),
+    (
+        "__tests__/",
+        frozenset({"password_literal", "localhost_url", "hardcoded_url", "clinical_threshold"}),
+    ),
+    (
+        "docs/",
+        frozenset(
+            {"password_literal", "localhost_url", "hardcoded_url", "postgres_dsn", "firebase"}
+        ),
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -127,16 +171,26 @@ RULES: list[Rule] = [
 ]
 
 
-def is_allowlisted(relative: str) -> bool:
+def exempt_rules(relative: str) -> frozenset[str]:
+    """Rule names this path is excused from. Everything else still applies."""
     normalised = relative.replace("\\", "/")
+    exempt: set[str] = set()
     if normalised in ALLOWLIST:
-        return True
-    return any(part in normalised for part in ALLOWLISTED_DIRECTORIES)
+        exempt |= ALLOWLIST[normalised][0]
+    for marker, rules in ALLOWLISTED_DIRECTORIES:
+        if marker in normalised:
+            exempt |= rules
+    return frozenset(exempt)
 
 
 def iter_files():
     for path in ROOT.rglob("*"):
-        if not path.is_file() or path.suffix not in SCAN_SUFFIXES:
+        if not path.is_file():
+            continue
+        # Environment files carry no scannable suffix but are exactly where a
+        # real secret gets pasted by accident, so include them by name.
+        is_env_file = path.name.startswith(".env")
+        if path.suffix not in SCAN_SUFFIXES and not is_env_file:
             continue
         if any(part in SKIP_DIRECTORIES for part in path.parts):
             continue
@@ -149,8 +203,7 @@ def scan() -> list[tuple[str, int, str, str]]:
     findings: list[tuple[str, int, str, str]] = []
     for path in iter_files():
         relative = str(path.relative_to(ROOT)).replace("\\", "/")
-        if is_allowlisted(relative):
-            continue
+        exempt = exempt_rules(relative)
         try:
             lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
         except OSError:
@@ -162,6 +215,8 @@ def scan() -> list[tuple[str, int, str, str]]:
             if stripped.startswith(("#", "//", "*", "/*")):
                 continue
             for rule in RULES:
+                if rule.name in exempt:
+                    continue
                 if rule.pattern.search(line):
                     findings.append((relative, number, rule.name, stripped[:110]))
     return findings
