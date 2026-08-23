@@ -1,0 +1,141 @@
+@import "../design-system/tokens/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--rs-surface);
+    color: var(--rs-ink);
+    font-family: var(--rs-font-sans);
+    font-size: var(--rs-text-base);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    transition: background var(--rs-duration) var(--rs-ease);
+  }
+
+  h1, h2, h3, h4 {
+    line-height: 1.2;
+    font-weight: 650;
+    letter-spacing: -0.011em;
+  }
+
+  /* Visible, consistent focus for keyboard users everywhere. */
+  :focus-visible {
+    outline: 2px solid var(--rs-accent);
+    outline-offset: 2px;
+    border-radius: var(--rs-radius-xs);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--rs-accent) 30%, transparent);
+  }
+}
+
+@layer components {
+  /* --- shared surface materials, parameterised by the role tokens --- */
+  .rs-panel {
+    background: var(--rs-surface-raised);
+    border: 1px solid var(--rs-line);
+    border-radius: var(--rs-radius-lg);
+    box-shadow: var(--rs-shadow-raised);
+  }
+
+  /* Glass is applied only in the dark role themes, where it reads as
+     instrument chrome rather than decoration. */
+  [data-role="doctor"] .rs-panel,
+  [data-role="admin"] .rs-panel {
+    backdrop-filter: blur(14px) saturate(1.25);
+    -webkit-backdrop-filter: blur(14px) saturate(1.25);
+  }
+
+  .rs-inset {
+    background: var(--rs-surface-sunken);
+    border-radius: var(--rs-radius-md);
+    box-shadow: var(--rs-shadow-sunken);
+  }
+
+  .rs-label {
+    font-size: var(--rs-text-2xs);
+    text-transform: uppercase;
+    letter-spacing: var(--rs-tracking-caps);
+    font-weight: 600;
+    color: var(--rs-ink-subtle);
+  }
+
+  .rs-numeric {
+    font-family: var(--rs-font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Skip link for keyboard and screen-reader users. */
+  .rs-skip-link {
+    position: absolute;
+    left: -9999px;
+    top: var(--rs-space-2);
+    z-index: 100;
+    padding: var(--rs-space-2) var(--rs-space-4);
+    background: var(--rs-accent);
+    color: var(--rs-accent-ink);
+    border-radius: var(--rs-radius-sm);
+  }
+  .rs-skip-link:focus {
+    left: var(--rs-space-4);
+  }
+}
+
+@layer utilities {
+  .rs-scroll-x {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+}
+
+/* --- motion --- */
+@keyframes rs-scan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes rs-pulse-ring {
+  0% { transform: scale(0.94); opacity: 0.85; }
+  70% { transform: scale(1.06); opacity: 0.15; }
+  100% { transform: scale(0.94); opacity: 0.85; }
+}
+
+@keyframes rs-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rs-sync-flow {
+  from { background-position: 0 0; }
+  to { background-position: 28px 0; }
+}
+
+/* Respect the user's motion preference — animations are decoration, never
+   the only channel carrying information. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

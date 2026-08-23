@@ -1,0 +1,202 @@
+/* ==========================================================================
+   RetinaSight AI — design tokens
+   Single source of truth for colour, elevation, typography, motion.
+   Components reference these variables; never raw hex values.
+
+   The palette is drawn from retinal imaging itself: the deep vitreous dark of
+   a fundus photograph, the amber-red of the retina, and a clinical cyan for
+   instrument readouts. It is not a generic SaaS blue.
+   ========================================================================== */
+
+:root {
+  /* ---- typography ---- */
+  --rs-font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --rs-font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+
+  --rs-text-2xs: 0.6875rem;
+  --rs-text-xs: 0.75rem;
+  --rs-text-sm: 0.875rem;
+  --rs-text-base: 1rem;
+  --rs-text-lg: 1.125rem;
+  --rs-text-xl: 1.375rem;
+  --rs-text-2xl: 1.75rem;
+  --rs-text-3xl: 2.25rem;
+
+  --rs-tracking-caps: 0.08em;
+
+  /* ---- spacing scale ---- */
+  --rs-space-1: 0.25rem;
+  --rs-space-2: 0.5rem;
+  --rs-space-3: 0.75rem;
+  --rs-space-4: 1rem;
+  --rs-space-5: 1.5rem;
+  --rs-space-6: 2rem;
+  --rs-space-7: 3rem;
+
+  /* ---- radius ---- */
+  --rs-radius-xs: 4px;
+  --rs-radius-sm: 8px;
+  --rs-radius-md: 12px;
+  --rs-radius-lg: 18px;
+  --rs-radius-xl: 28px;
+
+  /* ---- retinal / clinical hues (shared across roles) ---- */
+  --rs-retina: #c2410c;
+  --rs-retina-deep: #7c2d12;
+  --rs-retina-glow: #fb923c;
+  --rs-vitreous: #0a0f16;
+
+  /* ---- clinical risk scale ----
+     Severity is ALWAYS paired with a label, icon and position on the scale.
+     Colour never carries the meaning alone (accessibility + patient safety). */
+  --rs-risk-low: #0f766e;
+  --rs-risk-moderate: #a16207;
+  --rs-risk-high: #c2410c;
+  --rs-risk-urgent: #b91c1c;
+  --rs-risk-low-wash: #ccfbf1;
+  --rs-risk-moderate-wash: #fef3c7;
+  --rs-risk-high-wash: #ffedd5;
+  --rs-risk-urgent-wash: #fee2e2;
+
+  /* ---- status ---- */
+  --rs-ok: #0f766e;
+  --rs-warn: #a16207;
+  --rs-danger: #b91c1c;
+  --rs-info: #0e7490;
+
+  /* ---- default (light) surfaces — overridden per role below ---- */
+  --rs-surface: #f4f6f8;
+  --rs-surface-raised: #ffffff;
+  --rs-surface-sunken: #e6eaef;
+  --rs-ink: #10151c;
+  --rs-ink-muted: #4a5563;
+  --rs-ink-subtle: #6b7684;
+  --rs-line: #d3dae2;
+  --rs-accent: #0e7490;
+  --rs-accent-ink: #ffffff;
+
+  /* ---- elevation ---- */
+  --rs-shadow-raised: 0 1px 2px rgba(16, 21, 28, 0.06), 0 4px 12px rgba(16, 21, 28, 0.05);
+  --rs-shadow-sunken: inset 0 1px 3px rgba(16, 21, 28, 0.1);
+  --rs-shadow-panel: 0 12px 32px rgba(16, 21, 28, 0.1);
+  --rs-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--rs-accent) 35%, transparent);
+
+  /* ---- motion ---- */
+  --rs-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --rs-duration-fast: 120ms;
+  --rs-duration: 220ms;
+  --rs-duration-slow: 420ms;
+}
+
+/* ==========================================================================
+   CONTEXTUAL MORPHISM — each role gets its own material, matched to its work.
+   ========================================================================== */
+
+/* HEALTH WORKER — medical-device neumorphism.
+   Used one-handed, often outdoors, sometimes gloved: soft tactile surfaces,
+   large controls, physical-feeling depth. */
+[data-role="worker"] {
+  --rs-surface: #e8ecf1;
+  --rs-surface-raised: #eef2f6;
+  --rs-surface-sunken: #dde3ea;
+  --rs-ink: #16202b;
+  --rs-ink-muted: #46566a;
+  --rs-ink-subtle: #6a7a8c;
+  --rs-line: #c9d3de;
+  --rs-accent: #0f766e;
+  --rs-accent-ink: #ffffff;
+
+  --rs-shadow-raised: 6px 6px 14px rgba(139, 155, 172, 0.42),
+    -6px -6px 14px rgba(255, 255, 255, 0.92);
+  --rs-shadow-sunken: inset 4px 4px 9px rgba(139, 155, 172, 0.42),
+    inset -4px -4px 9px rgba(255, 255, 255, 0.9);
+  --rs-shadow-panel: 10px 10px 26px rgba(139, 155, 172, 0.34),
+    -8px -8px 22px rgba(255, 255, 255, 0.86);
+}
+
+/* DOCTOR — clinical glassmorphism on a dark imaging ground.
+   Retinal images must be judged against darkness, exactly like a lightbox
+   or DICOM workstation. Chrome recedes; the image dominates. */
+[data-role="doctor"] {
+  --rs-surface: #0a0f16;
+  --rs-surface-raised: rgba(24, 33, 45, 0.72);
+  --rs-surface-sunken: #05080d;
+  --rs-ink: #e8eef5;
+  --rs-ink-muted: #9dabbd;
+  --rs-ink-subtle: #6d7d91;
+  --rs-line: rgba(148, 170, 194, 0.22);
+  --rs-accent: #22d3ee;
+  --rs-accent-ink: #04212b;
+
+  --rs-risk-low: #2dd4bf;
+  --rs-risk-moderate: #fbbf24;
+  --rs-risk-high: #fb923c;
+  --rs-risk-urgent: #f87171;
+  --rs-risk-low-wash: rgba(45, 212, 191, 0.14);
+  --rs-risk-moderate-wash: rgba(251, 191, 36, 0.14);
+  --rs-risk-high-wash: rgba(251, 146, 60, 0.14);
+  --rs-risk-urgent-wash: rgba(248, 113, 113, 0.16);
+
+  --rs-ok: #2dd4bf;
+  --rs-warn: #fbbf24;
+  --rs-danger: #f87171;
+  --rs-info: #22d3ee;
+
+  --rs-shadow-raised: 0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 10px 30px rgba(0, 0, 0, 0.55);
+  --rs-shadow-sunken: inset 0 2px 10px rgba(0, 0, 0, 0.6);
+  --rs-shadow-panel: 0 20px 50px rgba(0, 0, 0, 0.62);
+}
+
+/* PATIENT — soft, calm, high-legibility.
+   Low cognitive load, generous type, gentle depth, no clinical jargon. */
+[data-role="patient"] {
+  --rs-surface: #fbf8f4;
+  --rs-surface-raised: #ffffff;
+  --rs-surface-sunken: #f3ede6;
+  --rs-ink: #1f1a17;
+  --rs-ink-muted: #574c45;
+  --rs-ink-subtle: #7a6d64;
+  --rs-line: #e4dbd1;
+  --rs-accent: #9a3412;
+  --rs-accent-ink: #ffffff;
+
+  --rs-text-base: 1.0625rem;
+  --rs-text-sm: 0.9375rem;
+
+  --rs-shadow-raised: 0 2px 4px rgba(74, 59, 48, 0.05),
+    0 8px 20px rgba(74, 59, 48, 0.07);
+  --rs-shadow-panel: 0 14px 34px rgba(74, 59, 48, 0.1);
+}
+
+/* ADMIN — structured command-center glass over slate.
+   Dense, monitoring-oriented, information-first. */
+[data-role="admin"] {
+  --rs-surface: #11161d;
+  --rs-surface-raised: rgba(30, 39, 50, 0.78);
+  --rs-surface-sunken: #0b0f14;
+  --rs-ink: #e6ebf2;
+  --rs-ink-muted: #9aa7b8;
+  --rs-ink-subtle: #6b7889;
+  --rs-line: rgba(154, 167, 184, 0.2);
+  --rs-accent: #38bdf8;
+  --rs-accent-ink: #062334;
+
+  --rs-risk-low: #2dd4bf;
+  --rs-risk-moderate: #fbbf24;
+  --rs-risk-high: #fb923c;
+  --rs-risk-urgent: #f87171;
+  --rs-risk-low-wash: rgba(45, 212, 191, 0.14);
+  --rs-risk-moderate-wash: rgba(251, 191, 36, 0.14);
+  --rs-risk-high-wash: rgba(251, 146, 60, 0.14);
+  --rs-risk-urgent-wash: rgba(248, 113, 113, 0.16);
+
+  --rs-ok: #2dd4bf;
+  --rs-warn: #fbbf24;
+  --rs-danger: #f87171;
+  --rs-info: #38bdf8;
+
+  --rs-shadow-raised: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 8px 24px rgba(0, 0, 0, 0.5);
+  --rs-shadow-panel: 0 18px 44px rgba(0, 0, 0, 0.55);
+}
