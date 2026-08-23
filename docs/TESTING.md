@@ -1,18 +1,18 @@
 # Testing
 
 ```
-Backend    122 passing
-Frontend    44 passing
-ML          12 passing (metrics) + dataset tests (need torch)
-Mobile      ~30 written, NOT RUN (no Dart SDK available)
-Scanner    149 files, clean
+Backend    150 passing
+Frontend    87 passing
+ML          35 passing
+Mobile      26 passing
+Scanner    211 files, clean (5 narrow exemptions)
 ```
 
 ```bash
-cd backend    && python -m pytest          # 122
-cd dashboard  && npm test                  # 44
-cd ml         && python -m pytest tests/   # metrics + dataset
-cd mobile     && flutter test              # requires Flutter
+cd backend    && python -m pytest          # 150
+cd dashboard  && npm test                  # 87
+cd ml         && python -m pytest tests/   # 35
+cd mobile     && flutter test              # 26
 python scripts/check_no_hardcoding.py --verbose
 ```
 
@@ -172,14 +172,37 @@ regression fails the build rather than waiting for review. Ten rules cover
 Firebase, hardcoded URLs, API keys, passwords, AWS keys, private keys, database
 DSNs, clinical thresholds and referral literals.
 
-Allowlisted paths are declared **with a reason**:
+### Exemptions are per-rule, never per-file
 
-| Path | Reason |
-|---|---|
-| `.env.example` | documents variables with placeholders |
-| `domain/config_defaults.py` | seeded defaults; runtime reads the database |
-| `domain/rbac_matrix.py` | security policy, deliberately version-controlled |
-| `core/config.py`, `lib/config.ts`, `core/config.dart` | the configuration layer itself; every value is env-overridable |
+This was previously a list of nine paths, each excused from **every** rule. That
+is a hole rather than a policy: an allowlisted file could have carried an AWS
+key, a private key or a Firebase import and the scan would still have printed
+`PASS`. Four of the nine turned out to suppress rules that never fired at all.
+
+Each entry now names only the rules it needs. Every other rule still applies to
+that path:
+
+| Path | Exempt from | Why |
+|---|---|---|
+| `scripts/check_no_hardcoding.py` | `firebase` | the scanner must contain the patterns it searches for |
+| `.env.example`, `dashboard/.env.example` | `localhost_url` | they *are* the development defaults; production never reads them |
+| `backend/tests/test_no_hardcoding.py` | `firebase` | the test asserting Firebase is absent must name it to search for it |
+| `backend/tests/test_config_paths.py` | `postgres_dsn` | a fabricated DSN, asserting non-SQLite URLs pass through unchanged |
+
+The last two are exempted **per file** rather than by weakening the whole
+`tests/` directory — a genuine Firebase import or a real DSN in any other test
+is still a failure.
+
+Directory exemptions are narrowed the same way. Test fixtures legitimately hold
+throwaway passwords, loopback URLs and threshold literals; nothing legitimately
+holds a cloud key or a private key, so those rules keep applying inside `tests/`.
+
+`.env` files are now scanned too. They carry no scannable suffix, and they are
+exactly where a real secret gets pasted by accident.
+
+Three tests hold the line: exemptions must be a **strict subset** of the rules,
+`.env` files must actually be reached, and a credential planted inside `tests/`
+must still be caught — it is, and it would not have been before.
 
 Anything else containing a URL, secret or threshold literal fails.
 

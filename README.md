@@ -39,27 +39,45 @@ Trained model        quadratic kappa 0.932 · referable sensitivity 0.914
 
 ## The interface
 
-Futuristic clinical glass: a deep vitreous ground with frosted, edge-lit panels
-in the palette of retinal imaging. Depth comes from three layers — **fixed**
-ambient light, a masked lattice for the blur to refract, and a specular top edge
-on each pane. Keeping the light source fixed while the glass scrolls is what
-makes the depth read as physical rather than painted on.
+Frosted, edge-lit glass panels over a **neutral graphite** ground. Depth comes
+from three layers — **fixed** ambient light, a masked lattice for the blur to
+refract, and a specular top edge on each pane. Keeping the light source fixed
+while the glass scrolls is what makes the depth read as physical rather than
+painted on.
+
+The ground is deliberately near-neutral rather than tinted. A strongly coloured
+surround shifts the apparent colour of whatever sits on it, and what sits on it
+here is a fundus photograph whose hue is part of the judgement — haemorrhages
+and exudates are read partly by colour. Imaging workstations specify a neutral
+surround for the same reason. Colour identity lives in the chrome instead, where
+it costs nothing.
 
 Four workspaces share the material but differ in accent and density, because the
 work differs:
 
 | Role | Route | Accent | Character |
 |---|---|---|---|
-| Health worker | `/user/*` | teal | highest contrast — used outdoors, one-handed |
-| Doctor | `/doctor/*` | cyan | darkest ground — images judged against darkness |
-| Patient | `/patient/*` | warm amber | lightest, gentler blur, larger type |
-| Admin | `/admin/*` | indigo | densest, monitoring-oriented |
+| Health worker | `/user/*` | lime `#a3e635` | highest contrast — used outdoors, one-handed |
+| Doctor | `/doctor/*` | periwinkle `#7aa2ff` | darkest ground — images judged against darkness |
+| Patient | `/patient/*` | lilac `#c9b6f7` | lightest, gentler blur, larger type |
+| Admin | `/admin/*` | orchid `#e879f9` | densest, monitoring-oriented |
+
+**No role accent may resemble a severity colour.** An earlier palette put the
+health-worker accent 3° of hue from the low-risk colour and the patient accent
+3° from high-risk — chrome that looks like a severity signal invites a misread of
+the one signal that must not be misread. Accents now sit in the blue-violet arc
+(lime for the field role, where daylight legibility outranks symmetry), a minimum
+of 39° from every severity hue, pinned by test. The severity scale itself is
+unchanged: green → amber → orange → red is learned and clinically load-bearing,
+and restyling it for novelty would be a safety regression.
 
 **Contrast is enforced by test, not by eye.** Translucency makes legibility easy
 to break invisibly — one such bug shipped and was caught only by measuring in the
 browser (a Tailwind arbitrary class silently failed to emit, leaving white text
-on a bright accent at ratio 1.58). 30 tests now compute real WCAG ratios for
-every theme. See [UI_DESIGN_SYSTEM.md](docs/UI_DESIGN_SYSTEM.md).
+on a bright accent at ratio 1.58). The suite now **parses `tokens.css` itself**
+rather than keeping a hand-copied palette, so a colour change cannot pass a green
+suite while shipping unreadable text. 43 tests across every theme.
+See [UI_DESIGN_SYSTEM.md](docs/UI_DESIGN_SYSTEM.md).
 
 ---
 
@@ -67,18 +85,29 @@ every theme. See [UI_DESIGN_SYSTEM.md](docs/UI_DESIGN_SYSTEM.md).
 
 ### 1. Configure
 
+**For local development, nothing.** No application code declares an environment
+value of its own — no host, no URL, no secret. Outside production the backend
+reads `.env.example` at the *lowest* precedence, and Vite does the same for the
+dashboard, so a fresh clone runs as-is. Create a `.env` only to override
+something:
+
 ```bash
 cp .env.example .env
 ```
 
-Generate real secrets — never ship the defaults:
+**For any real deployment, this step is mandatory.** Production does not read
+`.env.example`, and the service **refuses to start** on any required value that
+is unset, matches a placeholder, or still equals the value published in the
+example file. Generate real secrets:
 
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(64))"
 ```
 
 Set `RS_JWT_SECRET`, `RS_JWT_REFRESH_SECRET` and `RS_STORAGE_SIGNING_SECRET` to
-separate generated values.
+three *separate* generated values — reusing one across token families lets a
+stolen access token be replayed as a refresh token, which is also rejected at
+startup.
 
 ### 2. Backend
 

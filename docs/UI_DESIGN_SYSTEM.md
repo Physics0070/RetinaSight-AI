@@ -11,9 +11,16 @@ generic SaaS dashboard. Three ideas carry that:
 
 ## The material
 
-Every workspace is a deep vitreous ground with frosted, luminous panels floating
-above it, edge-lit in the palette of retinal imaging: the amber-red of the fundus
-and a diagnostic cyan for instrument readouts.
+Every workspace is a **neutral graphite** ground with frosted, luminous panels
+floating above it, edge-lit by a role accent from the blue-violet arc.
+
+The ground is near-neutral by design. A strongly tinted surround shifts the
+apparent colour of whatever sits on it (simultaneous contrast), and what sits on
+it here is a fundus photograph whose hue is part of the clinical judgement —
+haemorrhages and exudates are read partly by colour. Imaging workstations
+specify a neutral surround for exactly this reason. An earlier version of this
+system used a navy ground; the colour identity now lives entirely in the chrome,
+where it costs the image nothing.
 
 Three layers build the depth:
 
@@ -54,14 +61,44 @@ workspaces.
 
 | Role | Accent | Ground | Character |
 |---|---|---|---|
-| **Health worker** | teal `#2ee6c5` | `#060d12` | highest contrast, largest controls — used outdoors, one-handed |
-| **Doctor** | cyan `#22d3ee` | `#04060c` | darkest of the four; retinal images must be judged against darkness |
-| **Patient** | warm amber `#ffa76b` | `#0d1018` | lightest, gentler blur, larger type — an anxious reader shouldn't decode an interface |
-| **Admin** | indigo `#7c8cff` | `#070a13` | densest, monitoring-oriented |
+| **Health worker** | lime `#a3e635` | `#0a0c0a` | highest contrast, largest controls — used outdoors, one-handed |
+| **Doctor** | periwinkle `#7aa2ff` | `#070709` | darkest of the four; retinal images must be judged against darkness |
+| **Patient** | lilac `#c9b6f7` | `#121116` | lightest, gentler blur, larger type — an anxious reader shouldn't decode an interface |
+| **Admin** | orchid `#e879f9` | `#0c0a11` | densest, monitoring-oriented |
 
 One material, four densities. The work genuinely differs — a nurse in a field
 clinic and a clinician at a workstation are not doing the same job — but they now
 share one visual language.
+
+### Accents must not resemble severity colours
+
+The previous palette failed this and nobody noticed, because each colour was
+defensible on its own: the health-worker accent `#2ee6c5` sat **3° of hue** from
+the low-risk colour `#2dd4bf`, and the patient accent `#ffa76b` sat **3°** from
+the high-risk colour `#fb923c`. Interface chrome that resembles a severity
+signal invites a misread of the one signal that must never be misread.
+
+Every accent now sits at least **35°** from every severity hue — the tightest
+actual margin is the field role's lime against moderate amber, at 39°. Lime is
+the one accent outside the blue-violet arc, deliberately: at equal saturation it
+carries the highest luminance of any hue, which is what survives direct sunlight
+on a phone screen, and daylight legibility outranks palette symmetry for that
+role. The rule is enforced by test, including a guard-the-guard case pinning the
+two historical failures.
+
+### A bug this palette work uncovered
+
+`body` declared `transition: background`. When a transitioned property draws its
+value from a custom property that changes — which is exactly how `data-role`
+swaps a theme — Chrome latches the *previous* computed value and never
+re-resolves it. Measured in the browser, the background was still on the
+outgoing role's colour a full second later, not merely for the transition
+duration.
+
+The effect was that every portal painted on the `:root` ground, so the four
+per-role grounds above had been written but never actually shipped. Removing the
+transition makes them apply; role changes only happen on sign-in and sign-out,
+so there was nothing worth cross-fading anyway.
 
 ---
 
@@ -78,7 +115,7 @@ the rule; the button inherited near-white body ink and rendered white-on-cyan at
 a contrast ratio of **1.58** — unreadable.
 
 Fixed by setting the colour inline, and pinned by
-`dashboard/src/test/contrast.test.tsx` — **30 tests** that compute real WCAG
+`dashboard/src/test/contrast.test.tsx` — **43 tests** that compute real WCAG
 ratios for every theme:
 
 ```
@@ -86,11 +123,23 @@ accent ink on accent fill        >= 4.5   (all five themes)
 primary ink on the glass ground  >= 4.5
 muted ink on the glass ground    >= 4.5
 subtle ink (labels only)         >= 3.0
-risk colours on the ground       >= 3.0
+risk colours on every ground     >= 3.0
+accent-to-severity hue distance  >= 35 degrees
 ```
 
-One test deliberately asserts that near-white on a bright accent **fails**, so
-the reason the rule exists is documented alongside the fix.
+**The suite parses `tokens.css` itself.** It previously kept a hand-copied table
+of the palette, which meant a colour change could pass a green suite while
+shipping unreadable colour — the tests would have been measuring the copy, not
+the product. Reading the shipped stylesheet closes that gap.
+
+Two tests exist to document *why* the rules exist rather than only asserting the
+fix: one asserts that near-white on a bright accent **fails**, and one asserts
+that the two historical accent/severity pairs **fail** the separation rule, so a
+broken hue calculation cannot make the real check pass vacuously.
+
+> Tried and rejected: importing the stylesheet with Vite's `?raw` suffix. Under
+> vitest it resolves to `undefined`, which silently produced an empty palette —
+> every contrast test would have passed by measuring nothing at all.
 
 ---
 
