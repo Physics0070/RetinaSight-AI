@@ -46,7 +46,9 @@ ALLOWLIST: dict[str, str] = {
     "backend/app/domain/config_defaults.py": "seeded default policy; runtime reads the database",
     "backend/app/domain/rbac_matrix.py": "default security policy, deliberately version-controlled",
     "scripts/check_no_hardcoding.py": "this scanner contains the patterns it searches for",
-    "scripts/seed_dev_data.py": "clearly-labelled synthetic development data",
+    # Demo seeding uses known credentials by design so a reviewer can sign in.
+    # The script refuses to run when RS_ENV=production.
+    "scripts/seed_demo.py": "clearly-labelled synthetic demo data; refuses to run in production",
     # These two files ARE the configuration layer. Their localhost values are
     # development fallbacks that every deployment overrides via environment
     # variables (RS_* / VITE_*); no other module may contain such a literal.

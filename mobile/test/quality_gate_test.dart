@@ -17,7 +17,7 @@ img.Image syntheticFundus({
   int size = 320,
   bool blurred = false,
   double brightness = 1.0,
-  double coverage = 0.42,
+  double coverage = 0.75,
   int offsetX = 0,
   int offsetY = 0,
 }) {

@@ -22,7 +22,7 @@ from typing import Any
 import numpy as np
 
 from app.domain.enums import QualityIssue
-from app.ml.preprocessing import decode_image, retinal_mask, to_grayscale
+from app.ml.preprocessing import decode_image, resize, retinal_mask, to_grayscale
 
 # 3x3 discrete Laplacian — a standard focus operator, not a tunable rule.
 _LAPLACIAN_KERNEL = np.array(
@@ -84,6 +84,24 @@ def _clamp(value: float) -> float:
     return float(min(1.0, max(0.0, value)))
 
 
+def _to_analysis_scale(rgb: np.ndarray, target_long_edge: int) -> np.ndarray:
+    """Resize so measurements do not depend on the camera's resolution.
+
+    Variance of the Laplacian is *scale-dependent*: the same photograph measured
+    at 2000px and at 224px yields very different values. Without normalising the
+    analysis scale, the gate's verdict would vary with the phone model rather
+    than with image quality — unacceptable for a product whose whole premise is
+    heterogeneous smartphone cameras.
+    """
+    height, width = rgb.shape[:2]
+    long_edge = max(height, width)
+    if long_edge <= target_long_edge:
+        return rgb
+
+    scale = target_long_edge / long_edge
+    return resize(rgb, (max(1, int(width * scale)), max(1, int(height * scale))))
+
+
 def assess_quality(
     data: bytes,
     *,
@@ -91,8 +109,13 @@ def assess_quality(
     normalisation: dict[str, Any],
 ) -> QualityResult:
     """Score one captured image against the configured quality policy."""
-    rgb = decode_image(data)
-    height, width = rgb.shape[:2]
+    original = decode_image(data)
+    # Resolution is judged on the original; everything else on a fixed scale.
+    height, width = original.shape[:2]
+
+    rgb = _to_analysis_scale(
+        original, int(normalisation.get("analysis_long_edge", 512))
+    )
     gray = to_grayscale(rgb)
     mask = retinal_mask(rgb)
 
@@ -136,10 +159,11 @@ def assess_quality(
 
     if mask.any():
         rows, cols = np.nonzero(mask)
+        analysis_height, analysis_width = gray.shape
         centre_y, centre_x = float(rows.mean()), float(cols.mean())
         offset = float(
-            np.hypot(centre_x - width / 2.0, centre_y - height / 2.0)
-            / max(1.0, np.hypot(width, height) / 2.0)
+            np.hypot(centre_x - analysis_width / 2.0, centre_y - analysis_height / 2.0)
+            / max(1.0, np.hypot(analysis_width, analysis_height) / 2.0)
         )
     else:
         offset = 1.0
@@ -160,8 +184,11 @@ def assess_quality(
         red_ratio = float(channel_means[0] / total)
     else:
         red_ratio = 0.0
-    # 1/3 is neutral; ~0.5+ is strongly red-dominant as expected for fundus.
-    redness_score = _clamp((red_ratio - 0.33) / 0.20)
+    # 1/3 is neutral; real fundus images sit around 0.42-0.68. Both the floor
+    # and the span are configuration, not constants baked into the algorithm.
+    redness_floor = float(normalisation.get("red_ratio_floor", 0.36))
+    redness_span = float(normalisation.get("red_ratio_span", 0.14)) or 1.0
+    redness_score = _clamp((red_ratio - redness_floor) / redness_span)
     visibility_score = _clamp(min(coverage_score, redness_score))
 
     measurements["red_channel_ratio"] = round(red_ratio, 4)

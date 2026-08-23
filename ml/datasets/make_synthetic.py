@@ -48,7 +48,7 @@ def _draw_disc(size: int, rng: random.Random) -> np.ndarray:
     """Fundus base: red-dominant illuminated disc on a dark surround."""
     image = np.zeros((size, size, 3), dtype=np.float32)
     centre = size / 2
-    radius = size * rng.uniform(0.36, 0.42)
+    radius = size * rng.uniform(0.48, 0.53)
 
     yy, xx = np.mgrid[0:size, 0:size]
     distance = np.sqrt((xx - centre) ** 2 + (yy - centre) ** 2)

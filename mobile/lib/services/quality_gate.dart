@@ -32,13 +32,20 @@ class QualityPolicy {
     this.retinalVisibilityMin = 0.50,
     this.minWidth = 224,
     this.minHeight = 224,
-    this.sharpnessReference = 220.0,
-    this.targetLuminance = 118.0,
-    this.luminanceTolerance = 62.0,
-    this.maxClippedFraction = 0.12,
-    this.targetCoverage = 0.42,
-    this.coverageTolerance = 0.30,
-    this.maxCentreOffset = 0.28,
+    // Calibrated against 250 real APTOS fundus photographs. These MUST stay in
+    // step with backend/app/domain/config_defaults.py — if the device and the
+    // server disagree, a capture accepted here is rejected on upload and the
+    // health worker is sent round a loop they cannot win.
+    this.analysisLongEdge = 512,
+    this.sharpnessReference = 30.0,
+    this.targetLuminance = 90.5,
+    this.luminanceTolerance = 65.0,
+    this.maxClippedFraction = 0.02,
+    this.targetCoverage = 0.789,
+    this.coverageTolerance = 0.692,
+    this.maxCentreOffset = 0.136,
+    this.redRatioFloor = 0.36,
+    this.redRatioSpan = 0.14,
   });
 
   final double overallMin;
@@ -48,6 +55,7 @@ class QualityPolicy {
   final double retinalVisibilityMin;
   final int minWidth;
   final int minHeight;
+  final int analysisLongEdge;
   final double sharpnessReference;
   final double targetLuminance;
   final double luminanceTolerance;
@@ -55,6 +63,8 @@ class QualityPolicy {
   final double targetCoverage;
   final double coverageTolerance;
   final double maxCentreOffset;
+  final double redRatioFloor;
+  final double redRatioSpan;
 
   /// Build from the server's `quality.thresholds` + `quality.normalisation`.
   factory QualityPolicy.fromServer(
@@ -72,13 +82,17 @@ class QualityPolicy {
       retinalVisibilityMin: read(thresholds, 'retinal_visibility_min', 0.50),
       minWidth: (thresholds['min_width'] as num?)?.toInt() ?? 224,
       minHeight: (thresholds['min_height'] as num?)?.toInt() ?? 224,
-      sharpnessReference: read(normalisation, 'sharpness_reference', 220.0),
-      targetLuminance: read(normalisation, 'target_luminance', 118.0),
-      luminanceTolerance: read(normalisation, 'luminance_tolerance', 62.0),
-      maxClippedFraction: read(normalisation, 'max_clipped_fraction', 0.12),
-      targetCoverage: read(normalisation, 'target_coverage', 0.42),
-      coverageTolerance: read(normalisation, 'coverage_tolerance', 0.30),
-      maxCentreOffset: read(normalisation, 'max_centre_offset', 0.28),
+      analysisLongEdge:
+          (normalisation['analysis_long_edge'] as num?)?.toInt() ?? 512,
+      sharpnessReference: read(normalisation, 'sharpness_reference', 30.0),
+      targetLuminance: read(normalisation, 'target_luminance', 90.5),
+      luminanceTolerance: read(normalisation, 'luminance_tolerance', 65.0),
+      maxClippedFraction: read(normalisation, 'max_clipped_fraction', 0.02),
+      targetCoverage: read(normalisation, 'target_coverage', 0.789),
+      coverageTolerance: read(normalisation, 'coverage_tolerance', 0.692),
+      maxCentreOffset: read(normalisation, 'max_centre_offset', 0.136),
+      redRatioFloor: read(normalisation, 'red_ratio_floor', 0.36),
+      redRatioSpan: read(normalisation, 'red_ratio_span', 0.14),
     );
   }
 }
@@ -126,14 +140,36 @@ class QualityGate {
     return assessImage(decoded);
   }
 
-  QualityAssessment assessImage(img.Image source) {
-    final width = source.width;
-    final height = source.height;
+  /// Resize so measurements do not depend on the phone's sensor resolution.
+  ///
+  /// Variance of the Laplacian is scale-dependent: the same photograph measured
+  /// at 3000px and at 512px gives very different values. Without this the gate's
+  /// verdict would vary by handset rather than by image quality.
+  img.Image _toAnalysisScale(img.Image source) {
+    final longEdge = math.max(source.width, source.height);
+    if (longEdge <= policy.analysisLongEdge) return source;
+
+    final scale = policy.analysisLongEdge / longEdge;
+    return img.copyResize(
+      source,
+      width: math.max(1, (source.width * scale).round()),
+      height: math.max(1, (source.height * scale).round()),
+      interpolation: img.Interpolation.average,
+    );
+  }
+
+  QualityAssessment assessImage(img.Image original) {
     final issues = <String>[];
 
-    if (width < policy.minWidth || height < policy.minHeight) {
+    // Resolution is judged on the original capture; everything else on a
+    // fixed analysis scale so the result is comparable across devices.
+    if (original.width < policy.minWidth || original.height < policy.minHeight) {
       issues.add('low_resolution');
     }
+
+    final source = _toAnalysisScale(original);
+    final width = source.width;
+    final height = source.height;
 
     final luma = _luminance(source);
     final mask = _retinaMask(luma, width, height);
@@ -201,7 +237,9 @@ class QualityGate {
     }
     final total = red + green + blue;
     final redRatio = total > 0 ? red / total : 0.0;
-    final rednessScore = _clamp((redRatio - 0.33) / 0.20);
+    // Floor and span are policy, not constants baked into the algorithm.
+    final rednessScore =
+        _clamp((redRatio - policy.redRatioFloor) / policy.redRatioSpan);
     final visibilityScore = _clamp(math.min(coverageScore, rednessScore));
 
     final overall = (blurScore + lightingScore + framingScore + visibilityScore) / 4;

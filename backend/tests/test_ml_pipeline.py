@@ -35,7 +35,10 @@ def synthetic_fundus(
     *,
     blur: bool = False,
     brightness: float = 1.0,
-    coverage: float = 0.42,
+    # Real fundus photographs fill ~0.79 of the frame (measured across 250
+    # APTOS images). The gate is calibrated against that, so the fixture has to
+    # match or it stops being a valid proxy for production behaviour.
+    coverage: float = 0.75,
     offset: tuple[int, int] = (0, 0),
 ) -> bytes:
     """A crude fundus-like image: a red-dominant disc on a black surround."""

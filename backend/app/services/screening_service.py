@@ -238,7 +238,12 @@ class ScreeningService:
         return True
 
     def mark_ready_for_inference(self, session_id: uuid.UUID) -> ScreeningSession:
-        """Proceed with the captures obtained so far (single-eye screening)."""
+        """Proceed with the captures obtained so far (single-eye screening).
+
+        Idempotent: capturing a second acceptable eye already advances the
+        session, so a client that then calls this explicitly must not be met
+        with an error about a transition it did not ask for.
+        """
         session = self.get(session_id)
         acceptable = [
             image
@@ -247,8 +252,10 @@ class ScreeningService:
         ]
         if not acceptable:
             raise WorkflowError("No image has passed the quality gate yet.")
-        self._move_to(session, ScreeningState.READY_FOR_INFERENCE)
-        self.db.commit()
+
+        if session.state != ScreeningState.READY_FOR_INFERENCE.value:
+            self._move_to(session, ScreeningState.READY_FOR_INFERENCE)
+            self.db.commit()
         return session
 
     # ------------------------------------------------------------------ #
