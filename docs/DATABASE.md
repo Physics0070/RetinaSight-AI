@@ -1,0 +1,154 @@
+# Database
+
+**PostgreSQL** in production, **SQLite** for local development. Models are
+written portably so the same migrations apply to both.
+
+| Choice | Reason |
+|---|---|
+| UUID primary keys | records originate offline on devices; sequential ids would collide |
+| String-valued enum columns | portable across SQLite/PostgreSQL, no native-ENUM migration friction; values validated by Pydantic and the service layer |
+| Server-generated timestamps | `server_default=func.now()`, so time comes from the database rather than a device clock |
+| Named constraints | explicit naming convention → clean autogenerate diffs and working SQLite batch migrations |
+
+---
+
+## Entities
+
+### Identity and access
+
+| Table | Purpose |
+|---|---|
+| `users` | accounts, Argon2id hash, status, last-active |
+| `roles` | admin · health_worker · doctor · patient |
+| `permissions` | fine-grained capability codes |
+| `role_permissions` | grants (join) |
+| `user_roles` | assignments (join) |
+| `refresh_tokens` | `jti`, expiry, `revoked`, `replaced_by_jti` — enables rotation and family revocation |
+
+### Organisation
+
+| Table | Purpose |
+|---|---|
+| `clinics` | sites, location, connectivity status |
+| `doctors` | clinical profile → user, clinic, specialty, licence |
+| `health_workers` | field profile → user, clinic, staff code |
+
+### Patients
+
+| Table | Purpose |
+|---|---|
+| `patients` | identity, diabetes context, `portal_user_id` linking a self-service account |
+| `patient_consents` | one row per consent decision, with who recorded it and when |
+
+Consent is **append-only**: a new decision is a new row, so the history of what
+a patient agreed to is preserved rather than overwritten.
+
+### Screening
+
+| Table | Purpose |
+|---|---|
+| `screening_sessions` | the workflow record — `state`, `local_id`, sync status, offline flag |
+| `retinal_images` | metadata only: `storage_key`, checksum, dimensions, `eye_side`, `capture_index`, `is_active` |
+| `quality_assessments` | per-image scores, issues, recommendations, and a **snapshot of the thresholds used** |
+| `model_metadata` | registry: version, framework, target, classes, status, validation status and metrics |
+| `inference_results` | per-image prediction, confidence, class probabilities, model version, `is_development_model` |
+| `explanations` | Grad-CAM artefact keys, affected regions, method |
+| `risk_assessments` | risk level, reason, recommended action, `rule_id` and a **snapshot of the rule that fired** |
+| `referrals` | priority, status, routing, reason |
+| `clinical_reviews` | reviewer, decision, clinician's own grading, `agrees_with_ai`, notes |
+| `follow_ups` | due date, status, instructions |
+
+**Image bytes are never stored in the database.** Only metadata plus an opaque
+`storage_key` pointing at private object storage.
+
+**Why the snapshots matter.** `quality_assessments.thresholds_snapshot` and
+`risk_assessments.rules_snapshot` record the configuration in force at the time.
+Without them, changing a threshold would silently rewrite the meaning of every
+historical clinical record.
+
+### System
+
+| Table | Purpose |
+|---|---|
+| `sync_queue` | offline items; `UNIQUE (local_id, entity_type)` is what makes replay idempotent |
+| `audit_logs` | actor, action, resource, result, IP, sanitised context |
+| `system_configuration` | runtime clinical/business rules, versioned |
+| `feature_flags` | toggles |
+
+---
+
+## Key relationships
+
+```
+users ─┬─ user_roles ── roles ── role_permissions ── permissions
+       ├─ doctors ──────── clinics
+       ├─ health_workers ─ clinics
+       └─ refresh_tokens
+
+patients ─┬─ patient_consents
+          └─ screening_sessions ─┬─ retinal_images ── quality_assessments
+                                 ├─ inference_results ── explanations
+                                 ├─ risk_assessments
+                                 ├─ referrals
+                                 ├─ clinical_reviews
+                                 └─ follow_ups
+```
+
+Cascades are chosen deliberately:
+
+- `ON DELETE CASCADE` from a session to its images and assessments — they have
+  no meaning without it.
+- `ON DELETE SET NULL` from staff to clinic — closing a clinic must not delete
+  a clinician.
+
+---
+
+## Migrations
+
+Alembic, in `backend/migrations/`.
+
+```bash
+cd backend
+
+python -m alembic upgrade head                       # apply
+python -m alembic revision --autogenerate -m "..."   # generate
+python -m alembic downgrade -1                       # step back
+python -m alembic current                            # where am I
+```
+
+The connection URL is read from `RS_DATABASE_URL` inside `migrations/env.py` —
+it is deliberately **not** written into `alembic.ini`, so no credential is ever
+committed.
+
+`render_as_batch` is enabled for SQLite, which cannot `ALTER` columns in place.
+This keeps local development on exactly the same migration path as production.
+
+The initial migration creates all 25 tables and has been verified to apply and
+reverse cleanly.
+
+**Always review an autogenerated migration before committing it.** Alembic
+detects schema drift well but cannot infer intent — data migrations, defaults
+for existing rows and index trade-offs need a human.
+
+---
+
+## Development bootstrap
+
+```bash
+cd backend && python -m scripts.init_db
+```
+
+Idempotent. Creates the schema, seeds the RBAC policy and the configuration
+defaults, and creates the bootstrap administrator from `RS_SEED_ADMIN_*`.
+
+It refuses to create a production administrator with the default password, and
+validates that the seed email is actually usable for login — a reserved TLD such
+as `.local` or `.test` would otherwise produce an account that can never sign in.
+
+---
+
+## Transactions
+
+Repositories `flush` but never `commit`. The **service** that opened the unit of
+work commits it, so a multi-step clinical operation lands completely or not at
+all. A failed capture cannot leave an orphaned image row behind.
