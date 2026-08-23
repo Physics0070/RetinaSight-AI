@@ -1,0 +1,21 @@
+{
+  "architecture": "efficientnet_b0",
+  "classes": [
+    "no_dr",
+    "mild",
+    "moderate",
+    "severe",
+    "proliferative"
+  ],
+  "input_size": [
+    456,
+    456
+  ],
+  "opset": 17,
+  "source_checkpoint": "models\\efficientnet_b0-20260823-124225\\best.pt",
+  "parity_max_probability_difference": 0.00010913610458374023,
+  "supports_cam": true,
+  "exact_cam": true,
+  "decision_rule": "expected_grade",
+  "clinically_validated": false
+}

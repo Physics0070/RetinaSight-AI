@@ -1,0 +1,52 @@
+{
+  "label": "456px-ordinal",
+  "seeds": 3,
+  "image_size": 456,
+  "distance_weight": 0.5,
+  "summary": {
+    "quadratic_kappa": {
+      "mean": 0.9271,
+      "stdev": 0.0062,
+      "min": 0.9203,
+      "max": 0.9324,
+      "runs": [
+        0.9203,
+        0.9324,
+        0.9287
+      ]
+    },
+    "macro_f1": {
+      "mean": 0.7013,
+      "stdev": 0.0285,
+      "min": 0.6687,
+      "max": 0.7212,
+      "runs": [
+        0.6687,
+        0.7212,
+        0.714
+      ]
+    },
+    "accuracy": {
+      "mean": 0.8351,
+      "stdev": 0.0211,
+      "min": 0.815,
+      "max": 0.8571,
+      "runs": [
+        0.815,
+        0.8333,
+        0.8571
+      ]
+    },
+    "referable_sensitivity": {
+      "mean": 0.9412,
+      "stdev": 0.024,
+      "runs": [
+        0.9502,
+        0.914,
+        0.9593
+      ]
+    }
+  },
+  "note": "Mean and standard deviation across seeds. A difference smaller than the spread is not evidence of an improvement.",
+  "clinically_validated": false
+}

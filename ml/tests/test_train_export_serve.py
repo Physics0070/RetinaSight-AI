@@ -28,7 +28,9 @@ pytest.importorskip("onnx", reason="onnx not installed")
 pytest.importorskip("onnxruntime", reason="onnxruntime not installed")
 
 from datasets.retinal_dataset import CLASS_NAMES  # noqa: E402
+from export.cam_wrapper import EXPECTED_GRADE, CamWrapper  # noqa: E402
 from export.to_onnx import export  # noqa: E402
+from training.losses import expected_grade_predictions  # noqa: E402
 from training.model_factory import build_model  # noqa: E402
 
 
@@ -162,6 +164,104 @@ def test_served_model_supports_explanation(exported_model) -> None:
     assert explanation.heatmap_png.startswith(b"\x89PNG")
     assert explanation.overlay_png.startswith(b"\x89PNG")
     assert explanation.is_development_model is False
+
+
+@pytest.fixture(scope="module")
+def ordinal_export(tmp_path_factory) -> tuple[Path, torch.nn.Module, int]:
+    """A checkpoint flagged as ordinal, plus its export.
+
+    Mirrors how the 456px models were trained: evaluated by rounding the
+    expected grade, not by argmax.
+    """
+    tmp = tmp_path_factory.mktemp("ordinal")
+    image_size = 224
+
+    model = build_model("mobilenet_v2", num_classes=len(CLASS_NAMES), pretrained=False)
+    model.eval()
+
+    checkpoint_path = tmp / "best.pt"
+    torch.save(
+        {
+            "state_dict": model.state_dict(),
+            "arch": "mobilenet_v2",
+            "num_classes": len(CLASS_NAMES),
+            "classes": list(CLASS_NAMES),
+            "image_size": image_size,
+            "expected_grade_decision": True,
+        },
+        checkpoint_path,
+    )
+
+    onnx_path = tmp / "ordinal.onnx"
+    export(checkpoint_path, onnx_path)
+    return onnx_path, model, image_size
+
+
+def test_the_two_decision_rules_genuinely_disagree() -> None:
+    """Why the decision rule has to travel with the model.
+
+    A distribution split between the mildest and most severe grades has an
+    argmax at one extreme but an expectation in the middle. Serving an
+    ordinal-trained model by argmax would therefore report a different grade
+    from the one its published metrics were measured under.
+    """
+    model = build_model("mobilenet_v2", num_classes=len(CLASS_NAMES), pretrained=False)
+    wrapper = CamWrapper(model, "mobilenet_v2", decision_rule=EXPECTED_GRADE)
+
+    split = torch.tensor([[3.0, 0.0, 0.0, 0.0, 3.0]])
+
+    assert int(wrapper.decide(split)) == 2
+    assert int(split.argmax(dim=1)) == 0
+
+
+def test_ordinal_export_records_its_decision_rule(ordinal_export) -> None:
+    import json
+
+    onnx_path, _, _ = ordinal_export
+    metadata = json.loads(onnx_path.with_suffix(".json").read_text(encoding="utf-8"))
+
+    assert metadata["decision_rule"] == EXPECTED_GRADE
+
+
+def test_served_grade_matches_the_rule_the_model_was_measured_under(
+    ordinal_export,
+) -> None:
+    """The regression this guards: an ordinal model served by argmax.
+
+    Reported metrics come from the rounded expected grade, so the served path
+    must reproduce that rule or the registered numbers are unattainable.
+    """
+    onnx_path, model, image_size = ordinal_export
+    from app.ml.providers.onnx_provider import OnnxModelProvider
+
+    provider = OnnxModelProvider(model_path=str(onnx_path), version="ordinal-v1")
+    rng = np.random.default_rng(11)
+
+    for _ in range(12):
+        tensor = rng.standard_normal((1, 3, image_size, image_size)).astype(np.float32)
+        with torch.no_grad():
+            logits = model(torch.from_numpy(tensor))
+        expected = int(expected_grade_predictions(logits)[0])
+
+        assert provider.predict(tensor).category.value == CLASS_NAMES[expected]
+
+
+def test_provider_takes_its_input_size_from_the_graph(ordinal_export) -> None:
+    """A stale registry row must not drive preprocessing.
+
+    The graph fixes its spatial dimensions, so it — not the caller — is the
+    authority on the resolution images have to be resized to.
+    """
+    onnx_path, _, image_size = ordinal_export
+    from app.ml.providers.onnx_provider import OnnxModelProvider
+
+    provider = OnnxModelProvider(
+        model_path=str(onnx_path),
+        version="ordinal-v1",
+        input_size=(64, 64),  # deliberately wrong, as a stale row would be
+    )
+
+    assert provider.input_size == (image_size, image_size)
 
 
 def test_missing_artefact_reports_unavailable_rather_than_guessing(tmp_path) -> None:

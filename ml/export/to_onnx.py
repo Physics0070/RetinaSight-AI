@@ -24,7 +24,12 @@ import torch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from datasets.retinal_dataset import CLASS_NAMES  # noqa: E402
-from export.cam_wrapper import CamWrapper, verify_wrapper_matches  # noqa: E402
+from export.cam_wrapper import (  # noqa: E402
+    ARGMAX,
+    EXPECTED_GRADE,
+    CamWrapper,
+    verify_wrapper_matches,
+)
 from training.model_factory import build_model  # noqa: E402
 
 # What parity actually has to guarantee is that the exported graph makes the
@@ -47,6 +52,15 @@ def export(checkpoint_path: Path, output_path: Path, *, opset: int = 17) -> dict
     num_classes = checkpoint.get("num_classes", len(CLASS_NAMES))
     image_size = checkpoint.get("image_size", 224)
 
+    # The decision rule is a property of the checkpoint, not of the serving
+    # code: a model trained with the ordinal objective is evaluated by rounding
+    # the expected grade, and serving it by argmax would not reproduce its own
+    # reported metrics. Checkpoints predating the ordinal work carry no flag and
+    # were measured under argmax.
+    decision_rule = (
+        EXPECTED_GRADE if checkpoint.get("expected_grade_decision") else ARGMAX
+    )
+
     model = build_model(arch, num_classes=num_classes, pretrained=False)
     model.load_state_dict(checkpoint["state_dict"])
     model.eval()
@@ -57,7 +71,9 @@ def export(checkpoint_path: Path, output_path: Path, *, opset: int = 17) -> dict
     # Export through the CAM wrapper so the served graph can produce
     # explanations. ONNX Runtime has no gradients, so without this the
     # deployed model would return a blank heatmap.
-    wrapper = CamWrapper(model, arch)
+    wrapper = CamWrapper(
+        model, arch, decision_rule=decision_rule, image_size=image_size
+    )
     wrapper.eval()
     wrapper_drift = verify_wrapper_matches(model, wrapper, dummy)
     if wrapper_drift > 1e-5:
@@ -71,12 +87,13 @@ def export(checkpoint_path: Path, output_path: Path, *, opset: int = 17) -> dict
         dummy,
         str(output_path),
         input_names=["input"],
-        output_names=["logits", "cam"],
+        output_names=["logits", "cam", "grade"],
         # Batch is dynamic so the server can batch requests later.
         dynamic_axes={
             "input": {0: "batch"},
             "logits": {0: "batch"},
             "cam": {0: "batch"},
+            "grade": {0: "batch"},
         },
         opset_version=opset,
         do_constant_folding=True,
@@ -100,6 +117,9 @@ def export(checkpoint_path: Path, output_path: Path, *, opset: int = 17) -> dict
         "parity_max_probability_difference": parity,
         "supports_cam": True,
         "exact_cam": wrapper.supports_exact_cam,
+        # Recorded so a reader can tell how this artefact turns logits into a
+        # grade without opening the graph. The graph itself is authoritative.
+        "decision_rule": decision_rule,
         "clinically_validated": False,
     }
     metadata_path = output_path.with_suffix(".json")
@@ -143,8 +163,13 @@ def _verify_parity(model, onnx_path: Path, dummy: torch.Tensor) -> float | None:
         )
 
         with torch.no_grad():
-            expected = model(tensor)[0].numpy()
-        actual = session.run(None, {"input": tensor.numpy()})[0]
+            torch_outputs = model(tensor)
+        expected = torch_outputs[0].numpy()
+        expected_grade = int(torch_outputs[2].numpy().reshape(-1)[0])
+
+        onnx_outputs = session.run(None, {"input": tensor.numpy()})
+        actual = onnx_outputs[0]
+        actual_grade = int(np.asarray(onnx_outputs[2]).reshape(-1)[0])
 
         worst_logit_difference = max(
             worst_logit_difference, float(np.abs(expected - actual).max())
@@ -153,12 +178,15 @@ def _verify_parity(model, onnx_path: Path, dummy: torch.Tensor) -> float | None:
             worst_probability_difference,
             float(np.abs(_softmax(expected) - _softmax(actual)).max()),
         )
-        if int(np.argmax(expected)) != int(np.argmax(actual)):
+        # The grade output is what the service actually reports, so parity on it
+        # is the requirement — not parity on the argmax of the logits, which for
+        # an ordinal model is a different quantity entirely.
+        if expected_grade != actual_grade:
             disagreements += 1
 
     if disagreements:
         raise RuntimeError(
-            f"ONNX export changes the predicted class on {disagreements}/"
+            f"ONNX export changes the decided grade on {disagreements}/"
             f"{PARITY_PROBES} probes. Refusing to certify this artefact."
         )
     if worst_probability_difference > PROBABILITY_TOLERANCE:
@@ -170,7 +198,7 @@ def _verify_parity(model, onnx_path: Path, dummy: torch.Tensor) -> float | None:
 
     print(
         f"  parity verified over {PARITY_PROBES} probes: "
-        f"predicted class identical, max probability difference "
+        f"decided grade identical, max probability difference "
         f"{worst_probability_difference:.2e} "
         f"(logit difference {worst_logit_difference:.2e}, diagnostic only)"
     )

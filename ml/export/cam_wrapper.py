@@ -16,8 +16,22 @@ classifier weight row ``W[c]``, so Grad-CAM reduces to
 which is a plain tensor contraction. Baking it into the graph gives the serving
 runtime the same map PyTorch would produce, with no gradients required.
 
-The wrapper returns ``(logits, cam)`` where cam has shape
-``(batch, num_classes, H, W)``; the provider selects the predicted class's map.
+The wrapper returns ``(logits, cam, grade)`` where cam has shape
+``(batch, num_classes, H, W)``; the provider selects the reported grade's map.
+
+Why the graph also emits the decided grade
+------------------------------------------
+The five logits do not by themselves say which grade the model reports. Models
+trained with the ordinal objective decide by *rounding the expected grade*
+rather than by argmax (see ``training/losses.py``), and the two rules disagree
+on a meaningful fraction of cases — a distribution split between grades 2 and 4
+has argmax 2 but expectation 3.
+
+If the graph emitted only logits, the serving runtime would have to know which
+rule the checkpoint was trained under, and getting that wrong would silently
+serve a model that cannot reproduce its own reported metrics. Baking the
+decision into the graph makes the artefact self-describing: every consumer —
+cloud, edge, test — reads the same grade the evaluation harness measured.
 """
 
 from __future__ import annotations
@@ -41,21 +55,56 @@ def _final_linear(model: nn.Module) -> nn.Linear:
     raise ValueError("Could not locate the final linear layer for CAM extraction.")
 
 
-class CamWrapper(nn.Module):
-    """Emits logits plus per-class activation maps."""
+#: Decision rules a checkpoint may have been trained and evaluated under.
+EXPECTED_GRADE = "expected_grade"
+ARGMAX = "argmax"
 
-    def __init__(self, model: nn.Module, arch: str) -> None:
+
+class CamWrapper(nn.Module):
+    """Emits logits, per-class activation maps, and the decided grade.
+
+    Args:
+        decision_rule: how the model turns logits into a reported grade.
+            ``expected_grade`` rounds the softmax-weighted mean grade (what the
+            ordinal objective optimises); ``argmax`` takes the most likely
+            class. This must match the rule the checkpoint was evaluated under.
+    """
+
+    def __init__(
+        self,
+        model: nn.Module,
+        arch: str,
+        *,
+        decision_rule: str = ARGMAX,
+        image_size: int = 224,
+    ) -> None:
         super().__init__()
+        if decision_rule not in (EXPECTED_GRADE, ARGMAX):
+            raise ValueError(
+                f"Unknown decision rule {decision_rule!r}; "
+                f"expected {EXPECTED_GRADE!r} or {ARGMAX!r}."
+            )
         self.model = model
         self.arch = arch
+        self.decision_rule = decision_rule
         self.is_resnet = arch.startswith("resnet")
         self._linear = _final_linear(model)
 
+        # Grade values 0..K-1, for the expectation over the softmax. Registered
+        # as a buffer so the constant is captured in the exported graph.
+        self.register_buffer(
+            "grades",
+            torch.arange(self._linear.out_features, dtype=torch.float32),
+            persistent=False,
+        )
+
         # Probe the feature width once so the CAM path can be chosen up front.
+        # Probed at the model's own input size: spatial dims do not change the
+        # channel count, but a size the backbone rejects would fail here.
         model.eval()
         with torch.no_grad():
             self._feature_channels = int(
-                self._features(torch.zeros(1, 3, 224, 224)).shape[1]
+                self._features(torch.zeros(1, 3, image_size, image_size)).shape[1]
             )
 
     def _features(self, x: torch.Tensor) -> torch.Tensor:
@@ -89,7 +138,19 @@ class CamWrapper(nn.Module):
         """
         return self._feature_channels == self._linear.in_features
 
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def decide(self, logits: torch.Tensor) -> torch.Tensor:
+        """The grade the model reports, under its own decision rule."""
+        if self.decision_rule == ARGMAX:
+            return logits.argmax(dim=1)
+
+        # Rounding the expected grade. torch.round and the ONNX Round operator
+        # both round half to even, so the exported graph and the evaluation
+        # harness agree exactly on ties.
+        probabilities = nn.functional.softmax(logits, dim=1)
+        expected = (probabilities * self.grades).sum(dim=1)
+        return expected.round().clamp(0, self.grades.numel() - 1).to(torch.int64)
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         features = self._features(x)
         logits = self._classify(features)
 
@@ -102,7 +163,7 @@ class CamWrapper(nn.Module):
             mean_activation = features.mean(dim=1, keepdim=True)
             cam = mean_activation.expand(-1, logits.shape[1], -1, -1)
 
-        return logits, cam
+        return logits, cam, self.decide(logits)
 
 
 def verify_wrapper_matches(model: nn.Module, wrapper: CamWrapper, sample: torch.Tensor) -> float:
@@ -115,5 +176,5 @@ def verify_wrapper_matches(model: nn.Module, wrapper: CamWrapper, sample: torch.
     wrapper.eval()
     with torch.no_grad():
         original = model(sample)
-        wrapped, _ = wrapper(sample)
+        wrapped = wrapper(sample)[0]
     return float((original - wrapped).abs().max())

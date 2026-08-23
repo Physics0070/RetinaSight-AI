@@ -100,7 +100,7 @@ prevent it. If it still happens, try:
 
 ```bash
 python -m evaluation.evaluate --checkpoint models/<run>/best.pt --data-dir data/aptos
-python -m export.to_onnx --checkpoint models/<run>/best.pt --output models/dr-v1.onnx
+python -m export.to_onnx --checkpoint models/<run>/best.pt --output models/dr-v2.onnx
 ```
 
 The export refuses to write unless PyTorch and ONNX Runtime agree on the logits
@@ -123,7 +123,7 @@ copying is needed.
    | Framework | `ONNX` |
    | Deployment target | `Cloud` |
    | Architecture | `efficientnet_b0` |
-   | Artefact path | `dr-v1.onnx` |
+   | Artefact path | `dr-v2.onnx` |
 
 2. Open `ml/models/<run>/metrics.json` and paste the measured numbers into
    **Validation**. Leave the status as **not validated**.

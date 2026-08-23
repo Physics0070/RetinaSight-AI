@@ -94,7 +94,7 @@ without them.
 ## Export
 
 ```bash
-python -m export.to_onnx --checkpoint models/<run>/best.pt --output ../ml/models/dr-v1.onnx
+python -m export.to_onnx --checkpoint models/<run>/best.pt --output ../ml/models/dr-v2.onnx
 ```
 
 Verifies logit parity between PyTorch and ONNX Runtime before writing.

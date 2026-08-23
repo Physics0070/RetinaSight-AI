@@ -49,9 +49,16 @@ ml/models/**/*.pth
 ml/*.log
 # The servable model IS committed (16 MB) so the repo is runnable end-to-end.
 # Everything else under models/ is a build artefact.
+#
+# v2 is what serves. v1 is kept alongside it as a rollback artefact: it is a
+# different architecture generation (224px, argmax decision) and having it
+# present makes reverting a config change rather than a git surgery.
 ml/models/*
 !ml/models/dr-v1.onnx
 !ml/models/dr-v1.json
+!ml/models/dr-v2.onnx
+!ml/models/dr-v2.json
+!ml/models/456px-ordinal-summary.json
 
 # --- local tooling ---
 mobile/.flutter-plugins-dependencies

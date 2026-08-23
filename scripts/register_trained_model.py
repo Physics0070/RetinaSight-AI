@@ -42,10 +42,20 @@ def latest_metrics() -> Path | None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Register a trained model.")
     parser.add_argument("--metrics", default=None)
-    parser.add_argument("--artefact", default="dr-v1.onnx")
+    parser.add_argument("--artefact", default="dr-v2.onnx")
     parser.add_argument("--name", default="retinasight-dr")
     parser.add_argument("--version", default="v1")
     parser.add_argument("--architecture", default="efficientnet_b0")
+    parser.add_argument(
+        "--seed-summary",
+        default=None,
+        help=(
+            "Optional multi-seed summary JSON. The shipped checkpoint is the "
+            "best of several runs, so its own metrics are an optimistic draw; "
+            "recording the across-seed mean and spread alongside them keeps the "
+            "registry honest about expected performance."
+        ),
+    )
     args = parser.parse_args()
 
     metrics_path = Path(args.metrics) if args.metrics else latest_metrics()
@@ -63,13 +73,54 @@ def main() -> None:
             f"--output models/{args.artefact}"
         )
 
+    # Input size and architecture describe the artefact, so they are read from
+    # the sidecar the exporter wrote rather than assumed. Registering a 456px
+    # graph as 224px would preprocess every image at the wrong resolution.
+    sidecar = artefact.with_suffix(".json")
+    if not sidecar.is_file():
+        raise SystemExit(
+            f"No export metadata at {sidecar}. Re-export the artefact so its "
+            "input size and class order are recorded rather than guessed."
+        )
+    exported = json.loads(sidecar.read_text(encoding="utf-8"))
+    input_size = exported.get("input_size")
+    if not (isinstance(input_size, list) and len(input_size) == 2):
+        raise SystemExit(f"{sidecar} does not record a usable input_size.")
+    width, height = int(input_size[0]), int(input_size[1])
+    architecture = exported.get("architecture") or args.architecture
+    classes = exported.get("classes") or CLASSES
+
     raw = json.loads(metrics_path.read_text(encoding="utf-8"))
     reported = {k: raw[k] for k in ("accuracy", "macro_f1", "quadratic_kappa", "samples") if k in raw}
     if referable := raw.get("referable_dr"):
         reported["referable_sensitivity"] = referable.get("sensitivity")
         reported["referable_specificity"] = referable.get("specificity")
     reported["measured_on"] = raw.get("measured_on", "held-out validation split")
+    reported["decision_rule"] = exported.get("decision_rule", "argmax")
     reported["clinically_validated"] = False
+
+    # A single run's numbers are the best of several draws on a 546-image split
+    # whose run-to-run spread exceeds most improvements worth claiming. Where a
+    # multi-seed summary exists, the mean and spread are what should be read as
+    # this model's expected performance.
+    if args.seed_summary:
+        summary_path = Path(args.seed_summary)
+        if not summary_path.is_file():
+            raise SystemExit(f"No seed summary at {summary_path}.")
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        reported["across_seeds"] = {
+            "seeds": summary.get("seeds"),
+            **{
+                metric: {"mean": values.get("mean"), "stdev": values.get("stdev")}
+                for metric, values in (summary.get("summary") or {}).items()
+            },
+        }
+        reported["note_on_selection"] = (
+            "The shipped checkpoint is the best of "
+            f"{summary.get('seeds')} seeds by quadratic kappa. Read "
+            "'across_seeds' as expected performance; the top-level figures are "
+            "this checkpoint's own and are an optimistic draw."
+        )
 
     with SessionLocal() as db:
         existing = (
@@ -93,10 +144,10 @@ def main() -> None:
                 version=args.version,
                 framework=ModelFramework.ONNX.value,
                 deployment_target=DeploymentTarget.CLOUD.value,
-                architecture=args.architecture,
-                input_width=224,
-                input_height=224,
-                classes=CLASSES,
+                architecture=architecture,
+                input_width=width,
+                input_height=height,
+                classes=classes,
                 model_path=args.artefact,
                 status=ModelStatus.ACTIVE.value,
                 # Held-out metrics are NOT clinical validation.

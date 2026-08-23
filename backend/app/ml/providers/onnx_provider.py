@@ -55,6 +55,13 @@ class OnnxModelProvider(ModelProvider):
 
     @property
     def input_size(self) -> tuple[int, int]:
+        # Loading the session refines this from the graph. Preprocessing reads
+        # this property, so it has to reflect the graph before the first call —
+        # not after it has already resized an image to the wrong resolution.
+        try:
+            self._ensure_session()
+        except ModelNotAvailableError:
+            pass
         return self._input_size
 
     def _ensure_session(self):  # noqa: ANN202
@@ -74,6 +81,15 @@ class OnnxModelProvider(ModelProvider):
         self._session = ort.InferenceSession(
             str(self._path), providers=["CPUExecutionProvider"]
         )
+
+        # The graph is the authority on its own input size. Registry metadata
+        # and the environment fallback both carry a size, and a stale or absent
+        # one would preprocess at the wrong resolution — which for a fixed-shape
+        # graph is a runtime error, and for a dynamic one is silent degradation.
+        graph_size = _spatial_input_size(self._session)
+        if graph_size is not None and graph_size != self._input_size:
+            self._input_size = graph_size
+
         return self._session
 
     def is_available(self) -> bool:
@@ -100,7 +116,16 @@ class OnnxModelProvider(ModelProvider):
         logits = np.asarray(outputs[0]).reshape(-1)
 
         probabilities = logits if _looks_like_probabilities(logits) else softmax(logits)
-        index = int(np.argmax(probabilities))
+
+        # Which grade the model reports is the model's decision, not this
+        # provider's. Graphs exported with a decision head emit it as a third
+        # output; models trained with the ordinal objective decide by rounding
+        # the expected grade, which disagrees with argmax on a real fraction of
+        # cases. Older two-output graphs were evaluated under argmax, so that
+        # remains the fallback.
+        index = _decided_index(outputs, len(probabilities))
+        if index is None:
+            index = int(np.argmax(probabilities))
 
         # Models exported with the CAM wrapper carry a second output of shape
         # (batch, classes, H, W). Without it ONNX serving could not explain a
@@ -128,3 +153,29 @@ class OnnxModelProvider(ModelProvider):
 def _looks_like_probabilities(values: np.ndarray) -> bool:
     """True if the graph already applies softmax."""
     return bool(np.all(values >= 0) and abs(float(values.sum()) - 1.0) < 1e-3)
+
+
+def _decided_index(outputs: list, num_classes: int) -> int | None:
+    """The grade a decision-head graph reports, or None if it has no such head.
+
+    Guards the index rather than trusting it: an out-of-range value would index
+    the class list wrongly and mislabel a screening.
+    """
+    if len(outputs) < 3:
+        return None
+    decided = np.asarray(outputs[2]).reshape(-1)
+    if decided.size == 0 or not np.issubdtype(decided.dtype, np.integer):
+        return None
+    index = int(decided[0])
+    return index if 0 <= index < num_classes else None
+
+
+def _spatial_input_size(session) -> tuple[int, int] | None:  # noqa: ANN001
+    """(width, height) if the graph fixes them, else None for a dynamic graph."""
+    shape = session.get_inputs()[0].shape
+    if len(shape) != 4:
+        return None
+    height, width = shape[2], shape[3]
+    if isinstance(height, int) and isinstance(width, int):
+        return (width, height)
+    return None

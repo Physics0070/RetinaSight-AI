@@ -22,14 +22,14 @@ and a clinician who stays in the loop by design.
 ## Status
 
 ```
-264 tests passing    133 backend · 74 frontend · 31 ML · 26 mobile
-Scanner              188 files, no hardcoded config or secrets
-Trained model        quadratic kappa 0.885 · referable sensitivity 0.891
+279 tests passing    144 backend · 74 frontend · 35 ML · 26 mobile
+Scanner              206 files, no hardcoded config or secrets
+Trained model        quadratic kappa 0.932 · referable sensitivity 0.914
 ```
 
 | Component | Stack | Status |
 |---|---|---|
-| `backend/` | FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL | 60 endpoints, 133 tests |
+| `backend/` | FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL | 60 endpoints, 144 tests |
 | `dashboard/` | React 18 · TypeScript · Vite · Tailwind | 4 portals, 74 tests |
 | `ml/` | PyTorch · ONNX · Grad-CAM | trained model included |
 | `mobile/` | Flutter · SQLCipher · camera | analyzes clean, 26 tests |
@@ -137,35 +137,58 @@ cd mobile && flutter pub get && flutter run --dart-define=RS_API_BASE_URL=http:/
 
 ## The model
 
-A trained EfficientNet-B0 is included (`ml/models/dr-v1.onnx`, 16 MB), so the
-repository is runnable end to end.
+A trained EfficientNet-B0 is included (`ml/models/dr-v2.onnx`, 16 MB), so the
+repository is runnable end to end. It is trained at 456px with an ordinal
+objective and decides by rounding the expected grade rather than by argmax.
+The previous 224px model is kept as `dr-v1.onnx` for rollback.
 
-**Measured on 546 held-out APTOS 2019 images:**
+**Measured on 546 held-out APTOS 2019 images.** The shipped checkpoint is the
+best of three seeds by kappa, so its own figures are an optimistic draw; the
+across-seed column is the honest estimate of what a rerun would produce.
 
-| Metric | Value |
-|---|---|
-| **Quadratic weighted kappa** | **0.885** |
-| **Referable-DR sensitivity** | **0.891** |
-| Referable-DR specificity | 0.969 |
-| Accuracy | 0.846 |
-| Macro F1 | 0.707 |
+| Metric | Shipped checkpoint | Across 3 seeds | Previous (224px) |
+|---|---|---|---|
+| **Quadratic weighted kappa** | **0.932** | 0.927 ± 0.006 | 0.885 |
+| **Referable-DR sensitivity** | **0.914** | 0.941 ± 0.024 | 0.891 |
+| Referable-DR specificity | 0.948 | — | 0.969 |
+| Accuracy | 0.833 | 0.835 ± 0.021 | 0.846 |
+| Macro F1 | 0.721 | 0.701 ± 0.029 | 0.707 |
 
-**Read these honestly.** Accuracy is the weakest of the five: 49% of APTOS is
-grade 0, so predicting "no DR" for everything scores 49% while being clinically
-useless. Kappa is the headline because the grades are ordinal — confusing *no DR*
-with *proliferative* is far worse than *mild* with *moderate*, and kappa
-penalises by squared distance.
+**Read these honestly.**
 
-**Per-class recall:** no DR 0.99 · mild 0.82 · moderate 0.76 · **severe 0.43** ·
-proliferative 0.57.
+- **Kappa is the headline** because the grades are ordinal — confusing *no DR*
+  with *proliferative* is far worse than *mild* with *moderate*, and kappa
+  penalises by squared distance. The +0.042 gain over the 224px model is roughly
+  seven times the seed-to-seed spread, so it is a real effect, not noise.
+- **Accuracy went slightly down, and that is expected.** Rounding the expected
+  grade trades exact-match accuracy for smaller-distance errors. Accuracy is
+  also the weakest metric here: 49% of APTOS is grade 0, so predicting "no DR"
+  for everything scores 49% while being clinically useless.
+- **Specificity fell from 0.969 to 0.948.** A more sensitive model refers more
+  people, some of them unnecessarily. On roughly 325 non-referable cases that is
+  about seven extra referrals — the right trade for a screening tool, but it is
+  a real cost borne by patients and clinics, not a free win.
 
-Severe recall of 0.43 means the model misses more than half of severe cases, on
-28 validation examples. That gap is exactly why the risk engine forces clinician
-review on every case rather than trusting model confidence.
+**Per-class recall (shipped checkpoint):** no DR 0.97 · mild 0.69 ·
+moderate 0.70 · **severe 0.68** · proliferative 0.68.
+
+Severe recall moved from 0.43 to 0.68 — the single largest improvement, and the
+weakness the ordinal objective was chosen to attack. It still rests on only 28
+validation examples, so treat it as directional. That uncertainty is exactly why
+the risk engine forces clinician review on every case rather than trusting model
+confidence.
 
 > These are **development metrics on a held-out split** — not clinical
 > validation. The model is registered as `not_validated`, and the API rejects a
 > "validated" status submitted without evidence.
+
+**The decision rule ships inside the graph.** A model trained with the ordinal
+objective is measured by rounding its expected grade, which disagrees with
+argmax on a meaningful fraction of cases. Serving this checkpoint by argmax
+would score referable sensitivity 0.891 — indistinguishable from the model it
+replaces — while the registry advertised 0.914. So the exported ONNX graph emits
+the decided grade as a third output alongside the logits and CAM, and every
+consumer reads it. `ml/tests/test_train_export_serve.py` pins this.
 
 ### Training your own
 

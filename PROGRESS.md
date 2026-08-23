@@ -8,14 +8,14 @@
 
 | Check | Result |
 |---|---|
-| Backend tests | **133 passing** |
-| Frontend tests | **44 passing** |
-| ML pipeline tests | **31 passing** |
+| Backend tests | **144 passing** |
+| Frontend tests | **74 passing** |
+| ML pipeline tests | **35 passing** |
 | Frontend typecheck + production build | clean |
-| Hardcoding / secret / Firebase scan | **178 files, PASS** |
+| Hardcoding / secret / Firebase scan | **206 files, PASS** |
 | Alembic migration | applies and reverses cleanly (25 tables) |
-| **Trained model** | **kappa 0.885 · referable sensitivity 0.891** (APTOS 2019) |
-| Mobile (Flutter) | ⏳ SDK installing — verification in progress |
+| **Trained model** | **kappa 0.932 · referable sensitivity 0.914** (APTOS 2019) |
+| Mobile (Flutter) | `flutter analyze` clean, **26 tests passing** — never run on a device |
 
 ---
 
@@ -46,14 +46,24 @@ referable-DR sensitivity) · **ONNX export with enforced parity verification** �
 **class-activation maps baked into the exported graph** · synthetic generator
 for pipeline checks · preprocessing **imported from the serving code**.
 
-Trained EfficientNet-B0 on APTOS 2019 (3,662 images, 18.5 min):
+Trained EfficientNet-B0 on APTOS 2019 (3,662 images), at 456px with an ordinal
+objective, over three seeds:
 
 ```
-quadratic kappa 0.885 · accuracy 0.846 · macro-F1 0.707
-referable-DR sensitivity 0.891 · specificity 0.969
+shipped checkpoint  kappa 0.932 · accuracy 0.833 · macro-F1 0.721
+                    referable-DR sensitivity 0.914 · specificity 0.948
+across 3 seeds      kappa 0.927 ± 0.006 · referable sensitivity 0.941 ± 0.024
+superseded (224px)  kappa 0.885 · referable sensitivity 0.891
 ```
 
-Artefact `ml/models/dr-v1.onnx` serves correctly through the backend.
+Artefact `ml/models/dr-v2.onnx` serves correctly through the backend, verified
+by replaying the held-out split through the backend's own provider: the served
+metrics reproduce the reported ones exactly.
+
+The **decision rule is baked into the exported graph** alongside the CAM. The
+ordinal model is measured by rounding its expected grade; served by argmax it
+would score referable sensitivity 0.891 — no better than the model it replaces —
+while the registry advertised 0.914.
 
 ### Dashboard — four separate portals
 Design tokens with contextual morphism · retinal viewer (layers/zoom/pan/compare,

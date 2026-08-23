@@ -284,7 +284,7 @@ confusing *no DR* with *proliferative* is far worse than confusing *mild* with
 ### Export
 
 ```bash
-python -m export.to_onnx --checkpoint models/<run>/best.pt --output models/dr-v1.onnx
+python -m export.to_onnx --checkpoint models/<run>/best.pt --output models/dr-v2.onnx
 ```
 
 The export is **verified before it is written** — PyTorch and ONNX Runtime must
