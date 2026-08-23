@@ -17,13 +17,22 @@
 
   body {
     margin: 0;
-    background: var(--rs-surface);
+    background-color: var(--rs-surface);
     color: var(--rs-ink);
     font-family: var(--rs-font-sans);
     font-size: var(--rs-text-base);
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
-    transition: background var(--rs-duration) var(--rs-ease);
+    /* NO transition on the background here — deliberately.
+       The role themes change --rs-surface by swapping the data-role attribute
+       on <html>. When a transition is declared on a property whose value comes
+       from a custom property, Chrome latches the *previous* computed value and
+       never re-resolves it: measured in the browser, the background stayed on
+       the outgoing role's colour indefinitely, not merely for the transition
+       duration. The effect was that every portal painted on the :root ground
+       and the per-role grounds below were written but never actually shipped.
+       Removing the transition makes them apply. Role changes only happen on
+       sign-in and sign-out, so there is nothing worth cross-fading anyway. */
   }
 
   /* Ambient light behind every surface. Fixed so it does not scroll with
