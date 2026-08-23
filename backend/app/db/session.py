@@ -23,12 +23,15 @@ def _ensure_sqlite_dir(database_url: str) -> None:
 
 
 def _build_engine() -> Engine:
-    _ensure_sqlite_dir(settings.database_url)
+    # The resolved URL, so a relative SQLite path points at the same file
+    # whether the process was started from the repo root or from backend/.
+    database_url = settings.database_url_resolved
+    _ensure_sqlite_dir(database_url)
     connect_args: dict = {}
     if settings.is_sqlite:
         connect_args["check_same_thread"] = False
     engine = create_engine(
-        settings.database_url,
+        database_url,
         echo=settings.db_echo,
         pool_pre_ping=True,
         future=True,

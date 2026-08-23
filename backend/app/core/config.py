@@ -11,6 +11,7 @@ Render injects an unprefixed ``PORT``; the process entrypoint prefers it over
 
 from __future__ import annotations
 
+import re
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
@@ -23,6 +24,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # the process working directory, so the service behaves identically whether it
 # is started from the repo root, from backend/, or by a process manager.
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+# A file-backed SQLite URL: scheme + three slashes + a path. The negative
+# lookahead excludes the four-slash form, which is already absolute.
+_SQLITE_FILE_URL = re.compile(r"^(sqlite(?:\+\w+)?:///)(?!/)(.*)$")
+
+
+def _anchor(configured: str) -> Path:
+    """Resolve a configured filesystem path against the repository root."""
+    path = Path(configured).expanduser()
+    return path if path.is_absolute() else (REPO_ROOT / path).resolve()
 
 
 class Environment(str, Enum):
@@ -123,8 +134,44 @@ class Settings(BaseSettings):
         default (./ml/models) points at the same place the training pipeline
         writes to, regardless of where the process was started.
         """
-        configured = Path(self.model_dir).expanduser()
-        return configured if configured.is_absolute() else (REPO_ROOT / configured).resolve()
+        return _anchor(self.model_dir)
+
+    @property
+    def storage_local_root_path(self) -> Path:
+        """Absolute root of the local object store.
+
+        Anchored for the same reason as the model directory: a relative path
+        resolved against the working directory would put images uploaded by a
+        process started from backend/ somewhere a process started from the repo
+        root cannot see them.
+        """
+        return _anchor(self.storage_local_root)
+
+    @property
+    def database_url_resolved(self) -> str:
+        """Connection URL with any relative SQLite path made absolute.
+
+        The path inside a SQLite URL resolves against the process working
+        directory, so `uvicorn` started from backend/ and a script run from the
+        repo root would quietly operate on two different databases — the model
+        you registered would be missing from the one actually serving.
+
+        Anchoring it to the repository root matches how RS_MODEL_DIR already
+        behaves. Non-SQLite URLs (PostgreSQL in production) pass through
+        untouched, as do absolute paths and :memory:.
+        """
+        match = _SQLITE_FILE_URL.match(self.database_url)
+        if match is None:
+            return self.database_url
+
+        scheme, tail = match.groups()
+        if not tail or tail == ":memory:":
+            return self.database_url
+
+        path = Path(tail).expanduser()
+        if path.is_absolute():
+            return self.database_url
+        return f"{scheme}{(REPO_ROOT / path).resolve().as_posix()}"
 
     @computed_field  # type: ignore[prop-decorator]
     @property

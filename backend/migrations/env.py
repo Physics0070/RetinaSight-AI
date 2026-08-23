@@ -24,14 +24,16 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# The resolved URL, so `alembic upgrade` migrates the same database the
+# application opens regardless of which directory it was invoked from.
+config.set_main_option("sqlalchemy.url", settings.database_url_resolved)
 
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=settings.database_url,
+        url=settings.database_url_resolved,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
