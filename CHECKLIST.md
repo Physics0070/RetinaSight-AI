@@ -35,7 +35,68 @@ Commit `356af93`.
 
 ---
 
-## Task 2 — Total accuracy over 90%  🔄 IN PROGRESS
+## Task 2 — Total accuracy over 90%  ❗ MEASURED — TARGET NOT REACHED
+
+**Result: 5-class accuracy peaks at 0.8700. The >90% target was not met, and I
+could not meet it honestly.**
+
+Measured on the 546-image held-out split (`split_seed=42`), two members that
+genuinely share that split. Full grid in `ml/models/ensemble-2member.json`.
+
+| Configuration | rule | **acc** | kappa | macro-F1 | ref. sens |
+|---|---|---|---|---|---|
+| member1 (seed 42), no TTA | expected-grade | 0.8150 | 0.9203 | 0.6687 | 0.9502 |
+| member1 (seed 42), no TTA | argmax | 0.8388 | 0.9037 | 0.6995 | 0.9412 |
+| member1 + TTA | argmax | 0.8480 | 0.9092 | 0.7147 | 0.9412 |
+| member2 (seed 143), no TTA | expected-grade | 0.8242 | 0.9252 | 0.6994 | 0.9412 |
+| member2 (seed 143), no TTA | argmax | 0.8535 | 0.9151 | 0.7335 | 0.9231 |
+| **member2 + TTA** | **argmax** | **0.8700** | 0.9266 | 0.7513 | 0.9231 |
+| Ensemble, no TTA | argmax | 0.8571 | **0.9274** | 0.7346 | 0.9321 |
+| Ensemble + TTA | expected-grade | 0.8425 | 0.9258 | 0.7162 | **0.9593** |
+| Ensemble + TTA | argmax | 0.8590 | 0.9205 | 0.7351 | 0.9231 |
+
+### What the grid actually shows
+
+- **TTA works, modestly.** +0.0092 on member1 and +0.0165 on member2 (argmax).
+  Same direction on both, so it is a real effect rather than split noise.
+- **The ensemble did *not* help accuracy.** Two members averaged (0.8590) score
+  *below* the better member alone with TTA (0.8700), because member1 is the
+  weaker model and drags the mean down. Ensembling did produce the best kappa
+  (0.9274), which is the metric it is expected to help.
+- **argmax beats expected-grade on accuracy every time** (+2 to +5 points) and
+  **loses referable sensitivity every time**. That is the ordinal objective
+  working as designed, not a bug — it buys smaller-distance errors with
+  exact-match accuracy.
+- **0.8700 is an upper bound, not an expectation.** It is the maximum over 12
+  configurations scored on the same 546 images; picking the winner post-hoc on
+  one split is itself a mild form of overfitting. The script now prints this
+  caveat next to the figure so it cannot be quoted bare.
+
+### Why I am not claiming >90%
+
+Published state of the art on APTOS 5-class is roughly 85–88%. Reaching 90%
+here would have required one of three things, all of which I refused:
+testing on training data, redefining "accuracy" as the binary referable
+decision (~95%), or reporting the best seed as typical.
+
+**Metrics that genuinely do exceed 90%,** reported as what they are:
+
+| Metric | Value | What it means |
+|---|---|---|
+| Quadratic weighted kappa | **0.9274** | agreement on the ordinal grade — the standard DR metric |
+| Referable-DR sensitivity | **0.9593** | catches 95.9% of moderate-or-worse cases |
+
+For a screening tool that refers rather than diagnoses, referable sensitivity is
+the number that matters clinically. It is not the same thing as accuracy and is
+not offered as a substitute.
+
+### Still running
+A third member (seed 244) is training and will be added; it may move the
+ensemble figures slightly but will not close a 3-point gap.
+
+---
+
+## Task 2 — working notes
 
 **Honest position stated up front:** the target is 5-class exact-match accuracy on a
 held-out split. Current is **0.835**. Published state of the art on this dataset is

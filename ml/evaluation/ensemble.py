@@ -284,8 +284,12 @@ def main() -> None:
                 np.mean(tta_probabilities, axis=0), targets
             )
 
+    # Width from the actual content: a fixed width silently ran long run names
+    # into the next column, which made the table unreadable exactly where the
+    # comparison matters.
+    width = max((len(name) for name in results), default=20) + 2
     header = (
-        f"{'configuration':<44}{'rule':<16}{'acc':>8}{'kappa':>8}"
+        f"{'configuration':<{width}}{'rule':<16}{'acc':>8}{'kappa':>8}"
         f"{'f1':>8}{'ref.sens':>10}"
     )
     print(header)
@@ -293,10 +297,26 @@ def main() -> None:
     for name, by_rule in results.items():
         for rule, metrics in by_rule.items():
             print(
-                f"{name:<44}{rule:<16}"
+                f"{name:<{width}}{rule:<16}"
                 f"{metrics['accuracy']:>8.4f}{metrics['quadratic_kappa']:>8.4f}"
                 f"{metrics['macro_f1']:>8.4f}{metrics['referable_sensitivity']:>10.4f}"
             )
+
+    # Selecting the best of many configurations on one held-out set is itself a
+    # form of overfitting: the winner's margin is partly the luck of this split.
+    # Stated here so the headline figure is never quoted without it.
+    configurations = sum(len(by_rule) for by_rule in results.values())
+    best = max(
+        ((n, r, m) for n, by_rule in results.items() for r, m in by_rule.items()),
+        key=lambda item: item[2]["accuracy"],
+    )
+    print(
+        f"\nBest accuracy {best[2]['accuracy']:.4f} — {best[0]} / {best[1]}\n"
+        f"  Chosen as the maximum over {configurations} configurations measured on "
+        f"the same {len(val_samples)} images.\n"
+        f"  That selection is optimistic: treat it as an upper bound, not an "
+        f"expected value on new data."
+    )
 
     payload = {
         "measured_on": f"held-out split of {args.data_dir}",

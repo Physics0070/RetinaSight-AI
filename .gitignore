@@ -66,6 +66,10 @@ ml/models/*
 !ml/models/dr-v2.onnx
 !ml/models/dr-v2.json
 !ml/models/456px-ordinal-summary.json
+# Measurement records, not build artefacts: these are the evidence behind every
+# figure quoted in the README and CHECKLIST, and a number without its
+# measurement is just an assertion.
+!ml/models/ensemble-*.json
 
 # --- local tooling ---
 mobile/.flutter-plugins-dependencies
