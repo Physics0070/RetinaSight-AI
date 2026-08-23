@@ -68,12 +68,28 @@ validation.
 
 ### Open
 
-- The 456px + ordinal-loss experiment is **finished and measured but not
-  shipped** — see §6.
+> **All four steps in §6 are now DONE.** §6 is kept as the record of what was
+> asked and how each was resolved — read it before re-opening any of them.
+> Live status lives in [CHECKLIST.md](CHECKLIST.md).
+
+Genuinely still open, and none of it fakeable from this machine:
+
+- **The backend suite has only ever run against SQLite.** Neither `psql` nor
+  `docker` is installed here. Portability is structural — no raw SQL, no
+  SQLite-only types, `render_as_batch` migrations — but it is **not verified**.
+  This is the highest-value open item: it is the difference between "should work
+  on PostgreSQL" and "does".
+- **The Flutter app has never run on a device or emulator.** `flutter devices`
+  offers only Windows, Chrome and Edge; there is no Android emulator installed.
+  The 26 tests pass and `flutter analyze` is clean, but camera capture and the
+  on-device quality gate are unexercised on real hardware.
+- **The Kaggle API token pasted into chat during this project must be rotated.**
+  Treat it as public.
 - Deployment config exists (`render.yaml`, `docs/DEPLOYMENT.md`) but nothing is
   deployed.
-- Three tasks requested and not yet started: colour scheme change, accuracy
-  target, hardcoding elimination — see §6.
+- The 5-class accuracy target of >90% was **not reached** — 0.8700 is the
+  measured ceiling. See §6 Step 3; this is a limit of the task and dataset, not
+  an unfinished piece of work.
 
 ---
 
@@ -243,11 +259,34 @@ config paths now resolve against the repository root.
 
 ---
 
-## 6. Next steps
+## 6. Next steps — ALL RESOLVED
 
-Three tasks were requested and are **not started**. In order:
+Kept as the record of what was asked and how each was answered.
 
-### Step 1 — Ship or discard the 456px model *(decision needed)*
+| Step | Outcome |
+|---|---|
+| 1 — Ship or discard the 456px model | **Shipped** as `dr-v2`, active at 456×456, `not_validated`. The decision rule is baked into the ONNX graph as a third output — serving it by argmax scored referable sensitivity 0.891 while the registry advertised 0.914 |
+| 2 — Colour scheme | **Done.** Spectral accents on neutral graphite. Uncovered that `transition: background` latched the old value on a custom-property change, so all four per-role grounds had been written but never shipped |
+| 3 — Accuracy >90% | **Not reachable honestly. 0.8700 measured.** See below — this is a limit of the task, not unfinished work |
+| 4 — Eliminate hardcoding | **Done.** 9 blanket file exemptions → 5 narrow `(path, rule)` pairs; values removed rather than excused |
+
+**Before re-attempting Step 3, read this:** the obvious move — ensemble the
+three existing checkpoints — is invalid. Each was trained with a seed that also
+drove the train/val split, so of seed 143's 546 validation images, 462 sit in
+seed 42's *training* set; only 15 images were held out by all three. Averaging
+them scores against data they partly trained on. `split_seed` is now separate
+from `seed`, and `evaluation/ensemble.py` refuses members whose splits disagree.
+
+The measured ceiling, on one fixed split with TTA and ensembling separated:
+**0.8700** 5-class accuracy (best single model + TTA + argmax), itself the
+maximum over 16 configurations and therefore an upper bound. Kappa **0.9295**
+and referable sensitivity **0.9593** do exceed 90% and are different metrics.
+TTA helps single models but not the ensemble; ensembling helps kappa but not
+accuracy. Full grid: `ml/models/ensemble-3member.json`.
+
+---
+
+### Step 1 — Ship or discard the 456px model *(RESOLVED — shipped)*
 
 The experiment is complete and measured over three seeds:
 
@@ -268,7 +307,7 @@ and clinical sensitivity up while moving raw accuracy marginally *down*.
 To ship it: evaluate the best seed → `export.to_onnx` → verify it serves →
 `scripts/register_trained_model.py` → update README.
 
-### Step 2 — Change the colour scheme
+### Step 2 — Change the colour scheme *(RESOLVED — done)*
 
 Edit `dashboard/src/design-system/tokens/tokens.css` only. Four role themes:
 worker (teal), doctor (cyan), patient (amber), admin (indigo), plus the shared
@@ -279,7 +318,7 @@ ratios. If a new palette fails them, the palette is wrong, not the tests. Update
 the expected token values in `contrast.test.tsx` to match the new scheme and
 confirm every ratio still clears AA.
 
-### Step 3 — Accuracy target (>90%)
+### Step 3 — Accuracy target (>90%) *(RESOLVED — 0.8700, target not reachable)*
 
 **Read this before starting.** Current 5-class accuracy is 0.835–0.846.
 
@@ -303,7 +342,7 @@ Legitimate ways to push 5-class accuracy, in order of expected value:
 "accuracy" as the binary referable decision, or by reporting the best seed as if
 it were typical. If 90% is not reached, say so and report what was.
 
-### Step 4 — Eliminate remaining hardcoding
+### Step 4 — Eliminate remaining hardcoding *(RESOLVED — done)*
 
 The scanner passes across 201 files with **9 allowlisted paths**, each with a
 written reason (`scripts/check_no_hardcoding.py`, `ALLOWLIST`).
