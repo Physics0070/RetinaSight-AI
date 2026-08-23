@@ -52,7 +52,17 @@ class TrainingConfig:
     learning_rate: float = 3e-4
     weight_decay: float = 1e-4
     val_fraction: float = 0.15
+    # Weight init, augmentation and shuffling.
     seed: int = 42
+    # The train/val partition — deliberately SEPARATE from `seed`.
+    #
+    # These were one field, which meant changing the run seed also reshuffled
+    # the held-out set. Two consequences: repeated runs were measured against
+    # different test sets, and averaging their predictions was leakage, because
+    # each model had trained on images in the others' validation splits.
+    # Pinning the partition here makes the held-out set a fixed property of the
+    # dataset, so runs are comparable and can legitimately be ensembled.
+    split_seed: int = 42
     balance: bool = True
     amp: bool = True
     num_workers: int = 4
@@ -153,7 +163,7 @@ def train(config: TrainingConfig) -> Path:
     print(f"\nLoading dataset from {config.data_dir}")
     samples = discover_samples(config.data_dir)
     train_samples, val_samples = stratified_split(
-        samples, val_fraction=config.val_fraction, seed=config.seed
+        samples, val_fraction=config.val_fraction, seed=config.split_seed
     )
 
     print(f"  total {len(samples)}  train {len(train_samples)}  val {len(val_samples)}")
@@ -328,7 +338,11 @@ def parse_args() -> TrainingConfig:
     parser.add_argument("--learning-rate", type=float, default=3e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--val-fraction", type=float, default=0.15)
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Weight init, augmentation and shuffling.")
+    parser.add_argument("--split-seed", type=int, default=42,
+                        help="Train/val partition. Keep fixed across runs so they "
+                             "share a held-out set and can be compared or ensembled.")
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--patience", type=int, default=10)
     parser.add_argument("--selection-metric", default="quadratic_kappa",
@@ -351,6 +365,7 @@ def parse_args() -> TrainingConfig:
         weight_decay=args.weight_decay,
         val_fraction=args.val_fraction,
         seed=args.seed,
+        split_seed=args.split_seed,
         num_workers=args.num_workers,
         patience=args.patience,
         selection_metric=args.selection_metric,

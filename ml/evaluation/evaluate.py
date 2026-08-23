@@ -28,6 +28,7 @@ from datasets.retinal_dataset import (  # noqa: E402
     stratified_split,
 )
 from evaluation.metrics import evaluate_predictions, format_report  # noqa: E402
+from training.losses import expected_grade_predictions  # noqa: E402
 from training.model_factory import build_model  # noqa: E402
 
 
@@ -44,12 +45,24 @@ def load_checkpoint(path: Path, device: torch.device):
 
 
 @torch.no_grad()
-def predict(model, loader, device) -> tuple[np.ndarray, np.ndarray]:
+def predict(model, loader, device, *, expected_grade_decision: bool) -> tuple[np.ndarray, np.ndarray]:
+    """Predictions under the checkpoint's own decision rule.
+
+    This used to hardcode argmax, which silently misreported every model
+    trained with the ordinal objective: those decide by rounding the expected
+    grade, so the figures here disagreed with the run's own metrics.json for
+    the very same weights.
+    """
     predictions: list[np.ndarray] = []
     targets: list[np.ndarray] = []
     for images, labels in loader:
         logits = model(images.to(device))
-        predictions.append(logits.argmax(dim=1).cpu().numpy())
+        decided = (
+            expected_grade_predictions(logits)
+            if expected_grade_decision
+            else logits.argmax(dim=1)
+        )
+        predictions.append(decided.cpu().numpy())
         targets.append(labels.numpy())
     return (
         np.concatenate(targets) if targets else np.array([]),
