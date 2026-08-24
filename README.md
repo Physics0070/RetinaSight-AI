@@ -22,15 +22,15 @@ and a clinician who stays in the loop by design.
 ## Status
 
 ```
-279 tests passing    144 backend · 74 frontend · 35 ML · 26 mobile
-Scanner              206 files, no hardcoded config or secrets
+305 tests passing    157 backend · 87 frontend · 35 ML · 26 mobile
+Scanner              220 files, no hardcoded config or secrets
 Trained model        quadratic kappa 0.932 · referable sensitivity 0.914
 ```
 
 | Component | Stack | Status |
 |---|---|---|
-| `backend/` | FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL | 60 endpoints, 144 tests |
-| `dashboard/` | React 18 · TypeScript · Vite · Tailwind | 4 portals, 74 tests |
+| `backend/` | FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL | 60 endpoints, 157 tests |
+| `dashboard/` | React 18 · TypeScript · Vite · Tailwind | 4 portals, 87 tests |
 | `ml/` | PyTorch · ONNX · Grad-CAM | trained model included |
 | `mobile/` | Flutter · SQLCipher · camera | analyzes clean, 26 tests |
 | `scripts/` | hardcoding & secret scanner | runs inside the test suite |
@@ -319,9 +319,9 @@ container filesystem is ephemeral, so patient images would be lost on deploy.
 ## Testing
 
 ```bash
-cd backend    && python -m pytest          # 133
-cd dashboard  && npm test                  # 74
-cd ml         && python -m pytest tests/   # 31
+cd backend    && python -m pytest          # 157
+cd dashboard  && npm test                  # 87
+cd ml         && python -m pytest tests/   # 35
 cd mobile     && flutter test              # 26
 python scripts/check_no_hardcoding.py
 ```
