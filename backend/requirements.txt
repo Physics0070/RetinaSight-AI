@@ -29,3 +29,7 @@ httpx>=0.27,<1.0
 # --- test/dev tooling ---
 pytest>=8.2,<9.0
 pytest-asyncio>=0.23,<1.0
+# Parses render.yaml in test_deployment_blueprint.py. Present transitively via
+# uvicorn[standard] already, but declared because a test depends on it and a
+# transitive dependency can disappear without notice.
+PyYAML>=6.0,<7.0
