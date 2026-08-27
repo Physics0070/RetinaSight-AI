@@ -237,6 +237,12 @@ class Settings(BaseSettings):
         behaves. Non-SQLite URLs (PostgreSQL in production) pass through
         untouched, as do absolute paths and :memory:.
         """
+        # Render (like Heroku-style providers) issues `postgresql://...`, which
+        # SQLAlchemy maps to psycopg2 -- not installed here. psycopg 3 is.
+        if self.database_url.startswith(("postgres://", "postgresql://")):
+            _, _, tail = self.database_url.partition("://")
+            return f"postgresql+psycopg://{tail}"
+
         match = _SQLITE_FILE_URL.match(self.database_url)
         if match is None:
             return self.database_url

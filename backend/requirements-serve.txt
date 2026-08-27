@@ -1,0 +1,4 @@
+# Runtime deps for a deployed API/worker serving the exported ONNX graph.
+# Deliberately excludes torch/opencv — the ONNX path needs neither.
+-r requirements.txt
+onnxruntime>=1.17,<2.0

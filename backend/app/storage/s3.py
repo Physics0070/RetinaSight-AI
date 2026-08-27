@@ -67,8 +67,6 @@ class S3CompatibleStorage(ObjectStorageProvider):
                 Key=key,
                 Body=data,
                 ContentType=content_type,
-                # Explicitly private — never public-read.
-                ACL="private",
                 Metadata={k: str(v) for k, v in (metadata or {}).items()},
             )
         except Exception as exc:  # noqa: BLE001
