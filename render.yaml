@@ -11,7 +11,10 @@ databases:
   - name: retinasight-db
     databaseName: retinasight
     user: retinasight
-    plan: basic-256mb
+    # Free tier for the first deploy. Expires 30 days after creation --
+    # fine for a hackathon/demo, but recreate as a paid plan before that,
+    # or the database (and every service depending on it) goes dark.
+    plan: free
     postgresMajorVersion: "16"
     region: singapore
 
@@ -22,7 +25,10 @@ services:
   - type: web
     name: retinasight-api
     runtime: python
-    plan: starter
+    # Free tier for the first deploy. Fits in RAM per the sizing measurements
+    # in DEPLOY_RUNBOOK.md, but cold starts run 30-60s after idle -- fine for
+    # a demo, upgrade to `starter` before anything latency-sensitive.
+    plan: free
     region: singapore
     rootDir: backend
     buildCommand: pip install -r requirements-serve.txt
@@ -132,51 +138,11 @@ services:
         value: strict-origin-when-cross-origin
 
   # ------------------------------------------------------------------ #
-  # Background worker
+  # Background worker -- omitted for the first deploy.
   # ------------------------------------------------------------------ #
-  # Runs inference and Grad-CAM off the request path. Enable by setting
-  # RS_INFERENCE_MODE=worker on the API service.
-  - type: worker
-    name: retinasight-worker
-    runtime: python
-    plan: starter
-    region: singapore
-    rootDir: backend
-    buildCommand: pip install -r requirements-serve.txt
-    startCommand: python -m scripts.run_worker
-    autoDeploy: false
-    envVars:
-      - key: RS_ENV
-        value: production
-      - key: RS_LOG_LEVEL
-        value: INFO
-      - key: PYTHON_VERSION
-        value: "3.12.9"
-      - key: RS_DATABASE_URL
-        fromDatabase:
-          name: retinasight-db
-          property: connectionString
-      # Must match the API service exactly, or signed URLs will not verify.
-      - key: RS_STORAGE_SIGNING_SECRET
-        fromService:
-          name: retinasight-api
-          type: web
-          envVarKey: RS_STORAGE_SIGNING_SECRET
-      - key: RS_STORAGE_PROVIDER
-        value: s3
-      - key: RS_S3_BUCKET
-        sync: false
-      - key: RS_S3_REGION
-        sync: false
-      - key: RS_S3_ENDPOINT_URL
-        sync: false
-      - key: RS_S3_ACCESS_KEY_ID
-        sync: false
-      - key: RS_S3_SECRET_ACCESS_KEY
-        sync: false
-      # Must match the API service, or the worker grades with a different model
-      # than the one the API reports.
-      - key: RS_MODEL_PROVIDER
-        value: onnx
-      - key: RS_ACTIVE_MODEL_VERSION
-        value: dr-v2
+  # RS_INFERENCE_MODE defaults to `sync`; at demo volume the API alone
+  # handles inference (~150MB RSS, ~0.1s/image measured). A worker would
+  # just idle. Add it back (runtime: python worker, same S3/model env vars
+  # as the API, RS_STORAGE_SIGNING_SECRET via fromService, startCommand
+  # `python -m scripts.run_worker`) and set RS_INFERENCE_MODE=worker on the
+  # API once real load justifies it.
