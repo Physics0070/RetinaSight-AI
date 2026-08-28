@@ -37,6 +37,27 @@ Trained model        quadratic kappa 0.932 · referable sensitivity 0.914
 
 ---
 
+## Live deployment
+
+| Service | URL |
+|---|---|
+| Dashboard | https://retinasight-dashboard.onrender.com |
+| API | https://retinasight-api.onrender.com — health at `/health/ready`, `/docs` disabled in production |
+| Database | Managed PostgreSQL on Render, private networking only — no public endpoint |
+
+Deployed from the committed `render.yaml` Blueprint; see
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the procedure. Two free-tier
+trade-offs are live and intentional for now: the API cold-starts (30–60s)
+after ~15 minutes idle, and the database is on Render's free plan, which
+expires 30 days after creation — both are one-line plan upgrades in
+`render.yaml` when the project outgrows them.
+
+No credential of any kind (admin login, object-storage keys, JWT/signing
+secrets, database connection string) lives in this repository — every one of
+them is an environment variable set directly in Render's dashboard.
+
+---
+
 ## The interface
 
 Frosted, edge-lit glass panels over a **neutral graphite** ground. Depth comes
