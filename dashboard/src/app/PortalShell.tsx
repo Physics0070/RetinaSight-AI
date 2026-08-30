@@ -43,9 +43,13 @@ export function PortalShell({
   const navigate = useNavigate();
   const online = useConnectivity();
 
-  // Drive the role theme from the document root.
+  // Drive the role theme from the document root. The RoleName "health_worker"
+  // maps to the shorter theme key "worker" that tokens.css defines; the other
+  // three role names already match their theme keys. Without this map the field
+  // worker fell back to the default theme instead of its lime one.
   useEffect(() => {
-    document.documentElement.setAttribute("data-role", role);
+    const themeKey = role === "health_worker" ? "worker" : role;
+    document.documentElement.setAttribute("data-role", themeKey);
     return () => document.documentElement.removeAttribute("data-role");
   }, [role]);
 

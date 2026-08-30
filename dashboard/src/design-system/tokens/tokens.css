@@ -3,39 +3,32 @@
    Single source of truth for colour, elevation, typography, motion.
    Components reference these variables; never raw hex values.
 
-   VISUAL LANGUAGE — spectral instrument on graphite
-   -------------------------------------------------
-   Frosted, luminous glass panels float above a *neutral graphite* ground and
-   are edge-lit by a role accent drawn from the blue-violet arc.
+   VISUAL LANGUAGE — soft neumorphism on a matte clinical ground
+   -------------------------------------------------------------
+   Surfaces are extruded from — or pressed into — a single matte ground by a
+   paired soft shadow: a faint light source top-left, a deeper shadow
+   bottom-right. There is no translucency, no blur, no border; depth comes
+   entirely from the light. Every panel shares the ground's colour, which is
+   what makes the extrusion read as one continuous material.
 
-   Why the ground is neutral rather than blue
-   ------------------------------------------
-   The earlier ground carried a distinct navy cast. A strongly tinted surround
-   shifts the apparent colour of whatever sits on it (simultaneous contrast),
-   and here the thing sitting on it is an orange-red fundus photograph whose
-   colour is part of the judgement being made — haemorrhages and exudates are
-   read partly by hue. A near-neutral surround is what imaging workstations
-   specify, for exactly this reason. The role accents supply the colour
-   identity instead, and they live in the chrome where they cost nothing.
+   Why the ground is neutral and matte
+   -----------------------------------
+   A fundus photograph's own colour is part of the clinical judgement —
+   haemorrhages and exudates are read partly by hue — so the surround is kept
+   near-neutral, the standard for imaging workstations. Imagery itself still
+   sits on its own deep, near-black stage (see RetinalImageViewer /
+   CaptureInstrument); only the chrome is neumorphic.
 
    Why role accents avoid the severity hues
    ----------------------------------------
-   The previous palette put the health-worker accent at #2ee6c5 and the
-   low-risk severity colour at #2dd4bf — very nearly the same colour — and the
-   patient accent (#ffa76b) landed between the moderate and high severity
-   colours. An interface accent that looks like a severity signal invites a
-   misread of the one thing that must never be misread. Every role accent now
-   sits in the blue-violet arc (or, for the field role, lime), well clear of
-   the green-amber-orange-red severity progression.
+   An interface accent that resembles a severity signal invites a misread of
+   the one thing that must never be misread. Every role accent sits in the
+   blue-violet arc (or lime for the field role), well clear of the
+   green-amber-orange-red severity progression. The severity scale itself is
+   unchanged — those associations are learned and clinically load-bearing.
 
-   Why the severity scale itself did NOT change
-   --------------------------------------------
-   Those associations are learned and clinically load-bearing. Restyling them
-   for visual novelty would be a safety regression, so the progression stays
-   green -> amber -> orange -> red. Only the chrome around it moved.
-
-   ACCESSIBILITY CONSTRAINT: translucency must never cost legibility. Every
-   ink/surface and ink/accent pair in this file is measured against WCAG AA by
+   ACCESSIBILITY CONSTRAINT: soft shadows must never cost legibility. Every
+   ink/surface and ink/accent pair is measured against WCAG AA by
    `src/test/contrast.test.tsx`, which parses *this file* — so a palette change
    cannot silently drift away from its own contrast guarantees.
    ========================================================================== */
@@ -65,16 +58,14 @@
   --rs-space-6: 2rem;
   --rs-space-7: 3rem;
 
-  /* ---- radius: generous, for a soft glass feel ---- */
-  --rs-radius-xs: 6px;
-  --rs-radius-sm: 10px;
-  --rs-radius-md: 14px;
-  --rs-radius-lg: 20px;
-  --rs-radius-xl: 30px;
+  /* ---- radius: generous & rounded, the neumorphic idiom ---- */
+  --rs-radius-xs: 8px;
+  --rs-radius-sm: 12px;
+  --rs-radius-md: 16px;
+  --rs-radius-lg: 22px;
+  --rs-radius-xl: 32px;
 
-  /* ---- retinal reference hues ----
-     The fundus colour itself, kept for imagery-adjacent affordances. These are
-     descriptive of the tissue, not decorative, so they are unchanged. */
+  /* ---- retinal reference hues (descriptive of tissue, unchanged) ---- */
   --rs-retina: #ff6b3d;
   --rs-retina-deep: #7c2d12;
   --rs-retina-glow: #ffa76b;
@@ -92,50 +83,52 @@
   --rs-risk-high-wash: rgba(251, 146, 60, 0.14);
   --rs-risk-urgent-wash: rgba(251, 113, 133, 0.16);
 
-  /* ---- status ----
-     Info is cyan: no role accent occupies that hue any more, so an
-     informational badge can never be mistaken for role chrome. */
+  /* ---- status ---- */
   --rs-ok: #2dd4bf;
   --rs-warn: #fbbf24;
   --rs-danger: #fb7185;
   --rs-info: #22d3ee;
 
-  /* ---- default theme: neutral graphite glass ---- */
-  --rs-surface: #0b0c10;
-  --rs-surface-raised: rgba(30, 32, 40, 0.55);
-  --rs-surface-sunken: rgba(8, 9, 12, 0.66);
+  /* ---- default theme: matte graphite ----
+     surface == surface-raised: the panel and the ground are the SAME colour;
+     depth is drawn by the paired shadow, not by a fill difference. */
+  --rs-surface: #20232b;
+  --rs-surface-raised: #20232b;
+  --rs-surface-sunken: #1a1d24;
   --rs-ink: #eef0f6;
   --rs-ink-muted: #a8adbd;
-  --rs-ink-subtle: #767c8f;
-  --rs-line: rgba(170, 178, 205, 0.16);
+  --rs-ink-subtle: #7c8194;
+  --rs-line: rgba(180, 186, 210, 0.09);
   --rs-accent: #7aa2ff;
   --rs-accent-ink: #0a1230;
 
-  /* Ambient light behind the glass — what makes it read as depth
-     rather than flat translucency. */
-  --rs-ambient:
-    radial-gradient(1100px 600px at 12% -10%, rgba(122, 162, 255, 0.16), transparent 60%),
-    radial-gradient(900px 520px at 92% 8%, rgba(232, 121, 249, 0.10), transparent 62%),
-    radial-gradient(1000px 700px at 50% 108%, rgba(163, 230, 53, 0.07), transparent 60%);
+  /* ---- neumorphic light ----
+     The two shadows every raised/pressed surface is built from. Light source
+     is top-left; the deep shadow falls bottom-right. */
+  --rs-neu-light: rgba(255, 255, 255, 0.055);
+  --rs-neu-dark: rgba(0, 0, 0, 0.55);
 
-  /* ---- glass mechanics ---- */
-  --rs-glass-blur: 22px;
-  --rs-glass-saturate: 1.5;
-  /* Top edge-light: the highlight that sells a pane of glass. */
-  --rs-glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  --rs-glass-inner: inset 0 -1px 0 rgba(0, 0, 0, 0.25);
-
-  /* ---- elevation ---- */
+  /* ---- elevation (soft, paired) ---- */
   --rs-shadow-raised:
-    var(--rs-glass-edge), var(--rs-glass-inner),
-    0 10px 30px rgba(0, 0, 0, 0.55);
-  --rs-shadow-sunken: inset 0 2px 12px rgba(0, 0, 0, 0.6);
+    6px 6px 14px var(--rs-neu-dark),
+    -6px -6px 14px var(--rs-neu-light);
   --rs-shadow-panel:
-    var(--rs-glass-edge), 0 24px 60px rgba(0, 0, 0, 0.65);
+    10px 10px 26px var(--rs-neu-dark),
+    -8px -8px 22px var(--rs-neu-light);
+  --rs-shadow-sunken:
+    inset 4px 4px 9px var(--rs-neu-dark),
+    inset -4px -4px 9px var(--rs-neu-light);
   --rs-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--rs-accent) 40%, transparent);
-  /* Accent glow for primary actions and active instrument states. */
-  --rs-glow: 0 0 0 1px color-mix(in srgb, var(--rs-accent) 45%, transparent),
-    0 8px 26px color-mix(in srgb, var(--rs-accent) 28%, transparent);
+  /* Primary actions: the same soft extrusion plus a faint accent ring. */
+  --rs-glow:
+    6px 6px 14px var(--rs-neu-dark),
+    -6px -6px 14px var(--rs-neu-light),
+    0 0 0 1px color-mix(in srgb, var(--rs-accent) 30%, transparent);
+
+  /* Retained as no-ops: a few components still name these; the neumorphic
+     theme has no blur, so they resolve to nothing rather than breaking. */
+  --rs-glass-blur: 0px;
+  --rs-glass-saturate: 1;
 
   /* ---- motion ---- */
   --rs-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -146,99 +139,74 @@
 
 /* ==========================================================================
    ROLE THEMES
-   One material, four densities. Each keeps its own accent and information
-   density because the work differs, but the glass language is shared.
+   One material, four grounds. Each keeps its own accent and a subtly tinted
+   matte base, because the work differs — but the soft-light language is shared.
    ========================================================================== */
 
-/* HEALTH WORKER — field glass.
-   Used one-handed, often outdoors. Lime is the one accent placed outside the
-   blue-violet arc, deliberately: at equal saturation it carries the highest
-   luminance of any hue, which is what survives direct sunlight on a phone
-   screen. Daylight legibility outranks palette symmetry for this role. */
+/* HEALTH WORKER — field soft-UI.
+   Used one-handed, often outdoors. Lime is the one accent outside the
+   blue-violet arc: at equal saturation it carries the highest luminance of any
+   hue, which is what survives direct sunlight on a phone screen. */
 [data-role="worker"] {
-  --rs-surface: #0a0c0a;
-  --rs-surface-raised: rgba(28, 34, 28, 0.6);
-  --rs-surface-sunken: rgba(7, 10, 7, 0.7);
+  --rs-surface: #1f231e;
+  --rs-surface-raised: #1f231e;
+  --rs-surface-sunken: #191c18;
   --rs-ink: #eef4e9;
-  --rs-ink-muted: #adbaa4;
-  --rs-ink-subtle: #7c8a74;
-  --rs-line: rgba(176, 200, 160, 0.18);
+  --rs-ink-muted: #aebaa4;
+  --rs-ink-subtle: #838f79;
+  --rs-line: rgba(176, 200, 160, 0.10);
   --rs-accent: #a3e635;
   --rs-accent-ink: #16300a;
-
-  --rs-ambient:
-    radial-gradient(1000px 560px at 10% -8%, rgba(163, 230, 53, 0.16), transparent 60%),
-    radial-gradient(820px 500px at 95% 10%, rgba(122, 162, 255, 0.10), transparent 62%),
-    radial-gradient(900px 640px at 45% 110%, rgba(132, 204, 22, 0.10), transparent 60%);
+  --rs-neu-light: rgba(210, 232, 190, 0.05);
 }
 
-/* DOCTOR — imaging glass.
-   The darkest and most neutral ground of the four: retinal images must be
-   judged against darkness, exactly as on a lightbox or DICOM workstation, and
-   against as little colour cast as possible. Periwinkle is roughly
-   complementary to fundus orange, so the chrome never reads as tissue. */
+/* DOCTOR — imaging soft-UI.
+   The most neutral, slightly deeper ground of the four: chrome recedes so the
+   retinal image dominates. Periwinkle is roughly complementary to fundus
+   orange, so the chrome never reads as tissue. */
 [data-role="doctor"] {
-  --rs-surface: #070709;
-  --rs-surface-raised: rgba(26, 28, 36, 0.52);
-  --rs-surface-sunken: rgba(5, 5, 7, 0.72);
+  --rs-surface: #1b1e25;
+  --rs-surface-raised: #1b1e25;
+  --rs-surface-sunken: #16181e;
   --rs-ink: #ecf0f7;
   --rs-ink-muted: #a5acc0;
-  --rs-ink-subtle: #737b91;
-  --rs-line: rgba(160, 172, 205, 0.16);
+  --rs-ink-subtle: #79809a;
+  --rs-line: rgba(160, 172, 205, 0.09);
   --rs-accent: #7aa2ff;
   --rs-accent-ink: #0a1230;
-
-  --rs-glass-blur: 26px;
-  --rs-ambient:
-    radial-gradient(1200px 640px at 15% -12%, rgba(122, 162, 255, 0.14), transparent 62%),
-    radial-gradient(900px 520px at 88% 6%, rgba(201, 182, 247, 0.09), transparent 60%),
-    radial-gradient(1000px 720px at 50% 112%, rgba(99, 130, 220, 0.08), transparent 58%);
 }
 
-/* PATIENT — calm glass.
-   Deliberately the lightest and least busy: larger type, gentler blur, softer
-   contrast. Lilac is low-arousal and, critically, sits nowhere near the
-   severity scale — a patient reading their own result should never see
-   interface chrome that resembles a warning. */
+/* PATIENT — calm soft-UI.
+   Deliberately the softest: larger type, a touch lighter ground, gentler
+   contrast. Lilac is low-arousal and sits nowhere near the severity scale. */
 [data-role="patient"] {
-  --rs-surface: #121116;
-  --rs-surface-raised: rgba(42, 40, 50, 0.62);
-  --rs-surface-sunken: rgba(15, 14, 19, 0.66);
+  --rs-surface: #262230;
+  --rs-surface-raised: #262230;
+  --rs-surface-sunken: #201c29;
   --rs-ink: #f2eff7;
-  --rs-ink-muted: #b8b2c6;
-  --rs-ink-subtle: #847e94;
-  --rs-line: rgba(206, 198, 224, 0.16);
+  --rs-ink-muted: #bcb6c9;
+  --rs-ink-subtle: #928aa0;
+  --rs-line: rgba(206, 198, 224, 0.10);
   --rs-accent: #c9b6f7;
   --rs-accent-ink: #241442;
 
   --rs-text-base: 1.0625rem;
   --rs-text-sm: 0.9375rem;
-
-  /* Softer blur, gentler light — less clinical, more reassuring. */
-  --rs-glass-blur: 18px;
-  --rs-ambient:
-    radial-gradient(1000px 560px at 12% -8%, rgba(201, 182, 247, 0.15), transparent 60%),
-    radial-gradient(860px 520px at 92% 12%, rgba(167, 139, 250, 0.09), transparent 62%),
-    radial-gradient(900px 660px at 50% 108%, rgba(120, 113, 128, 0.10), transparent 58%);
+  --rs-neu-light: rgba(226, 214, 240, 0.06);
 }
 
-/* ADMIN — command-centre glass.
-   Densest of the four. Orchid is the most saturated accent in the set, which
-   suits a monitoring surface where status changes must catch the eye, and it
-   is the furthest of the four from any severity hue. */
+/* ADMIN — command-centre soft-UI.
+   Densest of the four. Orchid is the most saturated accent in the set, suited
+   to a monitoring surface where status changes must catch the eye. */
 [data-role="admin"] {
-  --rs-surface: #0c0a11;
-  --rs-surface-raised: rgba(36, 30, 46, 0.56);
-  --rs-surface-sunken: rgba(9, 7, 13, 0.7);
+  --rs-surface: #231d2a;
+  --rs-surface-raised: #231d2a;
+  --rs-surface-sunken: #1d1823;
   --rs-ink: #f0ecf7;
-  --rs-ink-muted: #b0a8c0;
-  --rs-ink-subtle: #7d7590;
-  --rs-line: rgba(196, 180, 220, 0.16);
+  --rs-ink-muted: #b3aac2;
+  --rs-ink-subtle: #8d84a0;
+  --rs-line: rgba(196, 180, 220, 0.10);
   --rs-accent: #e879f9;
   --rs-accent-ink: #2d0838;
-
-  --rs-ambient:
-    radial-gradient(1100px 600px at 8% -10%, rgba(232, 121, 249, 0.15), transparent 60%),
-    radial-gradient(900px 520px at 94% 8%, rgba(122, 162, 255, 0.11), transparent 62%),
-    radial-gradient(1000px 700px at 50% 110%, rgba(168, 85, 247, 0.10), transparent 58%);
+  --rs-neu-light: rgba(228, 208, 240, 0.055);
 }

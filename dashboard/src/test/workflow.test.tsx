@@ -100,6 +100,36 @@ describe("capture instrument", () => {
     );
     expect(screen.getByText(/image quality accepted/i)).toBeInTheDocument();
   });
+
+  it("offers zoom and fit controls only after an image is captured", async () => {
+    // jsdom has no object-URL implementation; the component only needs a token.
+    (URL as unknown as { createObjectURL: () => string }).createObjectURL = vi.fn(
+      () => "blob:preview",
+    );
+    (URL as unknown as { revokeObjectURL: () => void }).revokeObjectURL = vi.fn();
+
+    render(
+      <CaptureInstrument
+        eyeSide="left"
+        onCapture={vi.fn().mockResolvedValue(undefined)}
+        analysing={false}
+        quality={null}
+        onRetake={vi.fn()}
+      />,
+    );
+
+    // Nothing to frame yet, so no zoom controls before capture.
+    expect(screen.queryByRole("button", { name: /zoom in/i })).not.toBeInTheDocument();
+
+    const input = screen.getByLabelText(/capture retinal image for left eye/i);
+    await userEvent.upload(input, new File(["x"], "eye.png", { type: "image/png" }));
+
+    // Once captured, the operator can fit the fundus in the reticle.
+    expect(screen.getByRole("button", { name: /zoom in/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /zoom out/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /fit to view/i })).toBeInTheDocument();
+    expect(screen.getByText(/reposition/i)).toBeInTheDocument();
+  });
 });
 
 describe("offline experience", () => {

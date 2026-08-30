@@ -3,7 +3,7 @@
 The interface should read as **retinal imaging + medical technology**, not as a
 generic SaaS dashboard. Three ideas carry that:
 
-1. **Futuristic clinical glass** — one coherent material across the product.
+1. **Soft neumorphism** — one coherent material across the product.
 2. **Contextual density** — each role gets its own accent and information density.
 3. **The retinal image is the subject.** Chrome recedes around it.
 
@@ -11,41 +11,47 @@ generic SaaS dashboard. Three ideas carry that:
 
 ## The material
 
-Every workspace is a **neutral graphite** ground with frosted, luminous panels
-floating above it, edge-lit by a role accent from the blue-violet arc.
+Every workspace is a **matte, neutral ground** from which panels are extruded —
+or into which controls are pressed — by a single paired soft shadow. No
+translucency, no blur, no border: depth comes entirely from the light. The
+defining rule of neumorphism is that a panel is the **same colour as the
+ground**; only the shadow separates them, which is what makes the whole surface
+read as one continuous material rather than a stack of cards.
 
 The ground is near-neutral by design. A strongly tinted surround shifts the
 apparent colour of whatever sits on it (simultaneous contrast), and what sits on
 it here is a fundus photograph whose hue is part of the clinical judgement —
 haemorrhages and exudates are read partly by colour. Imaging workstations
-specify a neutral surround for exactly this reason. An earlier version of this
-system used a navy ground; the colour identity now lives entirely in the chrome,
-where it costs the image nothing.
+specify a neutral surround for exactly this reason. Imagery keeps its own deep,
+near-black stage; only the chrome is neumorphic.
 
-Three layers build the depth:
+Two shadows build every surface — a light source top-left, a deeper shadow
+bottom-right:
 
-| Layer | What it does |
+| Surface | How |
 |---|---|
-| **Ambient light** (`body::before`) | fixed radial gradients — the light source the glass refracts |
-| **Grid** (`body::after`) | a faint 56px lattice, masked to fade out, so blur has something to work on |
-| **Glass panels** (`.rs-panel`) | `backdrop-filter: blur() saturate()` + a specular top edge |
-
-The ambient layer is `position: fixed`, so glass moves across a *stationary*
-light source as the page scrolls. That is what makes the depth read as physical
-rather than painted on.
-
-The specular sheen is a 1px gradient border drawn with a mask-composite trick —
-a real pane of glass catches light along its top edge, and without it the panels
-look like flat translucent rectangles.
+| **Raised panel** (`.rs-panel`) | `box-shadow: dark bottom-right, light top-left` — lifted out of the ground |
+| **Pressed well** (`.rs-inset`) | the same pair, `inset` — sunk into the ground (inputs, readouts) |
+| **Key** (`.rs-neu`) | raised at rest, swaps to the inset shadow on `:active` — a button that physically depresses |
 
 ```css
+:root {
+  --rs-neu-light: rgba(255, 255, 255, 0.055);   /* top-left highlight */
+  --rs-neu-dark:  rgba(0, 0, 0, 0.55);           /* bottom-right shadow */
+}
 .rs-panel {
-  background: var(--rs-surface-raised);   /* translucent */
-  border: 1px solid var(--rs-line);
-  backdrop-filter: blur(var(--rs-glass-blur)) saturate(var(--rs-glass-saturate));
-  box-shadow: var(--rs-glass-edge), var(--rs-glass-inner), 0 10px 30px …;
+  background: var(--rs-surface-raised);          /* == the ground colour */
+  border-radius: var(--rs-radius-lg);
+  box-shadow:
+    6px 6px 14px var(--rs-neu-dark),
+    -6px -6px 14px var(--rs-neu-light);
 }
 ```
+
+There is no gradient or grid behind the panels — a flat, uniform ground is what
+lets the soft shadows read. (The previous version of this system was a frosted
+**glassmorphism**: translucent `backdrop-filter` panels over a lit, gridded
+ground. It was replaced wholesale by the neumorphic material above.)
 
 ---
 
@@ -61,10 +67,10 @@ workspaces.
 
 | Role | Accent | Ground | Character |
 |---|---|---|---|
-| **Health worker** | lime `#a3e635` | `#0a0c0a` | highest contrast, largest controls — used outdoors, one-handed |
-| **Doctor** | periwinkle `#7aa2ff` | `#070709` | darkest of the four; retinal images must be judged against darkness |
-| **Patient** | lilac `#c9b6f7` | `#121116` | lightest, gentler blur, larger type — an anxious reader shouldn't decode an interface |
-| **Admin** | orchid `#e879f9` | `#0c0a11` | densest, monitoring-oriented |
+| **Health worker** | lime `#a3e635` | `#1f231e` | highest contrast, largest controls — used outdoors, one-handed |
+| **Doctor** | periwinkle `#7aa2ff` | `#1b1e25` | darkest of the four; retinal images must be judged against darkness |
+| **Patient** | lilac `#c9b6f7` | `#262230` | softest ground, larger type — an anxious reader shouldn't decode an interface |
+| **Admin** | orchid `#e879f9` | `#231d2a` | densest, monitoring-oriented |
 
 One material, four densities. The work genuinely differs — a nurse in a field
 clinic and a clinician at a workstation are not doing the same job — but they now
@@ -104,7 +110,7 @@ so there was nothing worth cross-fading anyway.
 
 ## Contrast is a hard constraint, not a preference
 
-Translucency is the main risk this design takes: a frosted panel can quietly
+Low contrast is the main risk this design takes: a soft matte surface can quietly
 destroy legibility, and the failure is invisible in review because the colours
 all *look* deliberate.
 
@@ -120,8 +126,8 @@ ratios for every theme:
 
 ```
 accent ink on accent fill        >= 4.5   (all five themes)
-primary ink on the glass ground  >= 4.5
-muted ink on the glass ground    >= 4.5
+primary ink on the matte ground   >= 4.5
+muted ink on the matte ground     >= 4.5
 subtle ink (labels only)         >= 3.0
 risk colours on every ground     >= 3.0
 accent-to-severity hue distance  >= 35 degrees
@@ -263,7 +269,7 @@ channel carrying information.
 - Full keyboard operation, including the image viewer.
 - Live regions for loading, offline and error states.
 - **Severity never depends on colour alone.**
-- **Contrast is enforced by test**, because glass makes it easy to break.
+- **Contrast is enforced by test**, because soft surfaces make it easy to break.
 
 ---
 
@@ -284,4 +290,4 @@ Designed per role rather than by shrinking one layout:
 
 Generic admin templates · the default SaaS blue · purple "AI" gradients ·
 decorative blobs · a chatbot shell · uniform rounded-card grids with no
-hierarchy · glass so heavy it costs legibility.
+hierarchy · shadows so soft they cost legibility.

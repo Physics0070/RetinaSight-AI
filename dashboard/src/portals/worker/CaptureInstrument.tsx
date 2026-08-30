@@ -10,12 +10,18 @@
  * Flutter app drives the same backend flow with a live preview.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button, Panel, cx } from "@/design-system/components/primitives";
 import type { EyeSide, QualityAssessment } from "@/lib/types";
 
 type Phase = "ready" | "captured" | "analysing" | "passed" | "failed";
+
+// A phone photo often frames the fundus too small or off-centre. Zoom + pan let
+// the operator fit it inside the reticle before the quality gate runs.
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 5;
+const ZOOM_STEP = 0.3;
 
 interface Props {
   eyeSide: EyeSide;
@@ -39,6 +45,15 @@ export function CaptureInstrument({
   const [preview, setPreview] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("ready");
 
+  // Framing transform for the captured preview.
+  const [zoom, setZoom] = useState(ZOOM_MIN);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const dragState = useRef<{ x: number; y: number; active: boolean }>({
+    x: 0,
+    y: 0,
+    active: false,
+  });
+
   useEffect(() => {
     if (analysing) setPhase("analysing");
     else if (quality) setPhase(quality.is_acceptable ? "passed" : "failed");
@@ -51,12 +66,63 @@ export function CaptureInstrument({
     };
   }, [preview]);
 
+  const resetView = useCallback(() => {
+    setZoom(ZOOM_MIN);
+    setOffset({ x: 0, y: 0 });
+  }, []);
+
+  const changeZoom = useCallback((delta: number) => {
+    setZoom((current) => {
+      const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number((current + delta).toFixed(2))));
+      if (next === ZOOM_MIN) setOffset({ x: 0, y: 0 });
+      return next;
+    });
+  }, []);
+
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!preview || zoom === ZOOM_MIN) return;
+    dragState.current = { x: event.clientX, y: event.clientY, active: true };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragState.current.active) return;
+    const dx = event.clientX - dragState.current.x;
+    const dy = event.clientY - dragState.current.y;
+    dragState.current = { x: event.clientX, y: event.clientY, active: true };
+    setOffset((current) => ({ x: current.x + dx, y: current.y + dy }));
+  };
+  const endDrag = () => {
+    dragState.current.active = false;
+  };
+
+  // Keyboard parity — a mouse must never be required to frame the image.
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!preview) return;
+    const nudge = 20;
+    const actions: Record<string, () => void> = {
+      "+": () => changeZoom(ZOOM_STEP),
+      "=": () => changeZoom(ZOOM_STEP),
+      "-": () => changeZoom(-ZOOM_STEP),
+      "0": resetView,
+      ArrowUp: () => setOffset((c) => ({ ...c, y: c.y + nudge })),
+      ArrowDown: () => setOffset((c) => ({ ...c, y: c.y - nudge })),
+      ArrowLeft: () => setOffset((c) => ({ ...c, x: c.x + nudge })),
+      ArrowRight: () => setOffset((c) => ({ ...c, x: c.x - nudge })),
+    };
+    const action = actions[event.key];
+    if (action) {
+      event.preventDefault();
+      action();
+    }
+  };
+
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
     setPreview((current) => {
       if (current) URL.revokeObjectURL(current);
       return URL.createObjectURL(file);
     });
+    resetView();
     setPhase("captured");
     await onCapture(file);
   };
@@ -82,20 +148,40 @@ export function CaptureInstrument({
 
       {/* ---- viewfinder ---- */}
       <div
-        className="relative overflow-hidden rounded-[var(--rs-radius-lg)]"
+        role={preview ? "group" : undefined}
+        aria-label={
+          preview
+            ? `Captured ${eyeLabel} image. Use plus and minus to zoom, arrow keys to pan, zero to fit.`
+            : undefined
+        }
+        tabIndex={preview ? 0 : undefined}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerLeave={endDrag}
+        onKeyDown={onKeyDown}
+        className="relative overflow-hidden rounded-[var(--rs-radius-lg)] outline-none"
         style={{
           aspectRatio: "1 / 1",
           background: "radial-gradient(circle at 50% 50%, #141b23 0%, #05080c 78%)",
-          border: "1px solid var(--rs-line)",
           boxShadow: "var(--rs-shadow-sunken)",
+          cursor: preview && zoom > ZOOM_MIN ? "grab" : "default",
+          touchAction: "none",
         }}
       >
         {preview ? (
           <img
             src={preview}
             alt={`Captured retinal image, ${eyeLabel}`}
-            className="h-full w-full object-cover"
-            style={{ opacity: phase === "analysing" ? 0.75 : 1 }}
+            draggable={false}
+            className="h-full w-full select-none object-contain"
+            style={{
+              opacity: phase === "analysing" ? 0.75 : 1,
+              transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+              transition: dragState.current.active
+                ? "none"
+                : "transform var(--rs-duration) var(--rs-ease)",
+            }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
@@ -157,7 +243,35 @@ export function CaptureInstrument({
         >
           {eyeLabel}
         </span>
+
+        {preview && zoom > ZOOM_MIN && (
+          <span
+            className="rs-numeric pointer-events-none absolute right-3 top-3 rounded-[var(--rs-radius-xs)] px-2 py-1 text-[var(--rs-text-2xs)]"
+            style={{ background: "rgba(0,0,0,0.6)", color: "#dce6f2" }}
+          >
+            {zoom.toFixed(1)}×
+          </span>
+        )}
       </div>
+
+      {/* ---- framing controls (once an image is captured) ---- */}
+      {preview && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rs-label mr-1">Fit to frame</span>
+          <ZoomButton onClick={() => changeZoom(ZOOM_STEP)} label="Zoom in" disabled={zoom >= ZOOM_MAX}>
+            +
+          </ZoomButton>
+          <ZoomButton onClick={() => changeZoom(-ZOOM_STEP)} label="Zoom out" disabled={zoom <= ZOOM_MIN}>
+            −
+          </ZoomButton>
+          <ZoomButton onClick={resetView} label="Fit to view" disabled={zoom === ZOOM_MIN && offset.x === 0 && offset.y === 0}>
+            Fit
+          </ZoomButton>
+          <span className="text-[var(--rs-text-2xs)]" style={{ color: "var(--rs-ink-subtle)" }}>
+            Drag or use arrow keys to reposition
+          </span>
+        </div>
+      )}
 
       {/* ---- instrument readouts ---- */}
       <div className="grid grid-cols-3 gap-2">
@@ -235,6 +349,32 @@ export function CaptureInstrument({
         )}
       </div>
     </Panel>
+  );
+}
+
+/** A compact neumorphic control for the framing toolbar. */
+function ZoomButton({
+  children,
+  onClick,
+  label,
+  disabled,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      disabled={disabled}
+      className="rs-neu min-w-[2.5rem] rounded-[var(--rs-radius-md)] px-3 py-1.5 text-[var(--rs-text-sm)] font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+      style={{ background: "var(--rs-surface-raised)", color: "var(--rs-ink)" }}
+    >
+      {children}
+    </button>
   );
 }
 

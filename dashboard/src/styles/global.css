@@ -17,50 +17,19 @@
 
   body {
     margin: 0;
+    /* Matte, uniform ground. Neumorphism draws depth from paired shadows, so
+       the ground is a single flat colour with no gradient or grid — every
+       panel shares this exact colour and appears extruded from it.
+       NO transition on the background: the role themes change --rs-surface by
+       swapping the data-role attribute, and a transition on a property whose
+       value comes from a custom property latches the previous value in Chrome
+       and never re-resolves it. Role changes only happen on sign-in/out. */
     background-color: var(--rs-surface);
     color: var(--rs-ink);
     font-family: var(--rs-font-sans);
     font-size: var(--rs-text-base);
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
-    /* NO transition on the background here — deliberately.
-       The role themes change --rs-surface by swapping the data-role attribute
-       on <html>. When a transition is declared on a property whose value comes
-       from a custom property, Chrome latches the *previous* computed value and
-       never re-resolves it: measured in the browser, the background stayed on
-       the outgoing role's colour indefinitely, not merely for the transition
-       duration. The effect was that every portal painted on the :root ground
-       and the per-role grounds below were written but never actually shipped.
-       Removing the transition makes them apply. Role changes only happen on
-       sign-in and sign-out, so there is nothing worth cross-fading anyway. */
-  }
-
-  /* Ambient light behind every surface. Fixed so it does not scroll with
-     content — the glass moves across a stationary light source, which is what
-     makes the depth read as physical rather than painted on. */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    background: var(--rs-ambient);
-    pointer-events: none;
-  }
-
-  /* A faint grid, far below the glass. Gives the blur something to refract and
-     keeps large empty areas from looking like flat colour. */
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background-image:
-      linear-gradient(color-mix(in srgb, var(--rs-line) 55%, transparent) 1px, transparent 1px),
-      linear-gradient(90deg, color-mix(in srgb, var(--rs-line) 55%, transparent) 1px, transparent 1px);
-    background-size: 56px 56px;
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
-    opacity: 0.5;
-    pointer-events: none;
   }
 
   h1, h2, h3, h4 {
@@ -97,55 +66,54 @@
 
 @layer components {
   /* ---------------------------------------------------------------------- */
-  /* Glass panel — the core material                                        */
+  /* Neumorphic panel — the core material                                   */
+  /* A raised surface, the same colour as the ground, lifted by paired soft   */
+  /* shadows. No border, no blur, no fill difference — only light.            */
   /* ---------------------------------------------------------------------- */
   .rs-panel {
     position: relative;
     background: var(--rs-surface-raised);
-    border: 1px solid var(--rs-line);
     border-radius: var(--rs-radius-lg);
     box-shadow: var(--rs-shadow-raised);
-    backdrop-filter: blur(var(--rs-glass-blur)) saturate(var(--rs-glass-saturate));
-    -webkit-backdrop-filter: blur(var(--rs-glass-blur)) saturate(var(--rs-glass-saturate));
     transition:
-      border-color var(--rs-duration) var(--rs-ease),
       transform var(--rs-duration) var(--rs-ease),
       box-shadow var(--rs-duration) var(--rs-ease);
   }
 
-  /* Specular sheen across the top edge — a real pane catches the light. */
-  .rs-panel::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(
-      160deg,
-      rgba(255, 255, 255, 0.22),
-      rgba(255, 255, 255, 0.02) 38%,
-      transparent 65%
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-  }
-
-  /* Interactive panels lift slightly and warm their edge on hover. */
+  /* Interactive panels rise a little further on hover — the light source
+     stays put while the surface lifts toward it. */
   .rs-panel-interactive:hover {
     transform: translateY(-2px);
-    border-color: color-mix(in srgb, var(--rs-accent) 45%, var(--rs-line));
     box-shadow: var(--rs-shadow-panel);
   }
 
+  /* A surface pressed INTO the ground rather than raised out of it — used for
+     inputs, wells, and instrument readouts. */
   .rs-inset {
     background: var(--rs-surface-sunken);
-    border: 1px solid color-mix(in srgb, var(--rs-line) 70%, transparent);
     border-radius: var(--rs-radius-md);
     box-shadow: var(--rs-shadow-sunken);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Neumorphic control — raised by default, pressed IN on :active.         */
+  /* Applied to buttons so pressing physically depresses the key.           */
+  /* ---------------------------------------------------------------------- */
+  .rs-neu {
+    box-shadow: var(--rs-shadow-raised);
+    transition:
+      box-shadow var(--rs-duration-fast) var(--rs-ease),
+      transform var(--rs-duration-fast) var(--rs-ease);
+  }
+  .rs-neu:hover:not(:disabled) {
+    box-shadow: var(--rs-shadow-panel);
+  }
+  .rs-neu:active:not(:disabled) {
+    box-shadow: var(--rs-shadow-sunken);
+    transform: translateY(1px);
+  }
+  .rs-neu:disabled {
+    box-shadow: var(--rs-shadow-raised);
   }
 
   /* Edge-lit accent rail, used to mark urgency on a queue row. */
@@ -231,17 +199,7 @@
   to { background-position: 28px 0; }
 }
 
-/* Slow drift of the ambient light — barely perceptible, but stops a mostly
-   static dark screen from feeling dead. */
-@keyframes rs-ambient-drift {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.82; }
-}
-
 @media (prefers-reduced-motion: no-preference) {
-  body::before {
-    animation: rs-ambient-drift 18s ease-in-out infinite;
-  }
   .rs-panel {
     animation: rs-reveal var(--rs-duration) var(--rs-ease) both;
   }

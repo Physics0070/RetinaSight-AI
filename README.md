@@ -22,7 +22,7 @@ and a clinician who stays in the loop by design.
 ## Status
 
 ```
-305 tests passing    157 backend · 87 frontend · 35 ML · 26 mobile
+306 tests passing    157 backend · 88 frontend · 35 ML · 26 mobile
 Scanner              220 files, no hardcoded config or secrets
 Trained model        quadratic kappa 0.932 · referable sensitivity 0.914
 ```
@@ -30,7 +30,7 @@ Trained model        quadratic kappa 0.932 · referable sensitivity 0.914
 | Component | Stack | Status |
 |---|---|---|
 | `backend/` | FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL | 60 endpoints, 157 tests |
-| `dashboard/` | React 18 · TypeScript · Vite · Tailwind | 4 portals, 87 tests |
+| `dashboard/` | React 18 · TypeScript · Vite · Tailwind | 4 portals, 88 tests |
 | `ml/` | PyTorch · ONNX · Grad-CAM | trained model included |
 | `mobile/` | Flutter · SQLCipher · camera | analyzes clean, 26 tests |
 | `scripts/` | hardcoding & secret scanner | runs inside the test suite |
@@ -60,44 +60,53 @@ them is an environment variable set directly in Render's dashboard.
 
 ## The interface
 
-Frosted, edge-lit glass panels over a **neutral graphite** ground. Depth comes
-from three layers — **fixed** ambient light, a masked lattice for the blur to
-refract, and a specular top edge on each pane. Keeping the light source fixed
-while the glass scrolls is what makes the depth read as physical rather than
-painted on.
+**Soft neumorphism on a matte clinical ground.** Every surface is extruded from —
+or pressed into — a single flat colour by a paired soft shadow: a faint light
+source top-left, a deeper shadow bottom-right. There is no translucency, no
+blur, no border; depth comes entirely from the light, and each panel shares the
+ground's exact colour, which is what makes the extrusion read as one continuous
+material. Buttons are raised keys that physically depress on press; inputs sit
+pressed into the surface.
 
-The ground is deliberately near-neutral rather than tinted. A strongly coloured
-surround shifts the apparent colour of whatever sits on it, and what sits on it
-here is a fundus photograph whose hue is part of the judgement — haemorrhages
-and exudates are read partly by colour. Imaging workstations specify a neutral
-surround for the same reason. Colour identity lives in the chrome instead, where
-it costs nothing.
+The ground is deliberately near-neutral and matte. A strongly coloured surround
+shifts the apparent colour of whatever sits on it, and what sits on it here is a
+fundus photograph whose hue is part of the judgement — haemorrhages and exudates
+are read partly by colour. Imaging workstations specify a neutral surround for
+the same reason. Imagery keeps its own deep, near-black stage; only the chrome
+is neumorphic.
 
-Four workspaces share the material but differ in accent and density, because the
+Four workspaces share the material but differ in accent and tint, because the
 work differs:
 
 | Role | Route | Accent | Character |
 |---|---|---|---|
 | Health worker | `/user/*` | lime `#a3e635` | highest contrast — used outdoors, one-handed |
-| Doctor | `/doctor/*` | periwinkle `#7aa2ff` | darkest ground — images judged against darkness |
-| Patient | `/patient/*` | lilac `#c9b6f7` | lightest, gentler blur, larger type |
+| Doctor | `/doctor/*` | periwinkle `#7aa2ff` | deepest ground — images judged against darkness |
+| Patient | `/patient/*` | lilac `#c9b6f7` | softest ground, larger type |
 | Admin | `/admin/*` | orchid `#e879f9` | densest, monitoring-oriented |
 
-**No role accent may resemble a severity colour.** An earlier palette put the
-health-worker accent 3° of hue from the low-risk colour and the patient accent
-3° from high-risk — chrome that looks like a severity signal invites a misread of
-the one signal that must not be misread. Accents now sit in the blue-violet arc
-(lime for the field role, where daylight legibility outranks symmetry), a minimum
-of 39° from every severity hue, pinned by test. The severity scale itself is
-unchanged: green → amber → orange → red is learned and clinically load-bearing,
-and restyling it for novelty would be a safety regression.
+**No role accent may resemble a severity colour.** Accents sit in the blue-violet
+arc (lime for the field role, where daylight legibility outranks symmetry), a
+minimum of 39° from every severity hue, pinned by test — chrome that looks like
+a severity signal invites a misread of the one signal that must not be misread.
+The severity scale itself is unchanged: green → amber → orange → red is learned
+and clinically load-bearing, and restyling it for novelty would be a safety
+regression. (A latent bug surfaced during the redesign: the field worker's
+`data-role` was the role name `health_worker`, not the theme key `worker`, so its
+lime theme had never actually applied — now mapped and fixed.)
 
-**Contrast is enforced by test, not by eye.** Translucency makes legibility easy
-to break invisibly — one such bug shipped and was caught only by measuring in the
-browser (a Tailwind arbitrary class silently failed to emit, leaving white text
-on a bright accent at ratio 1.58). The suite now **parses `tokens.css` itself**
-rather than keeping a hand-copied palette, so a colour change cannot pass a green
-suite while shipping unreadable text. 43 tests across every theme.
+**Fit the fundus in the frame.** Right after capture, the operator can zoom and
+pan the image — buttons, mouse drag, or arrow keys — to seat the retina inside
+the alignment reticle before the quality gate runs, so a photo framed slightly
+too small or off-centre is salvaged rather than retaken. The doctor's review
+viewer has the same controls plus layer toggles for the Grad-CAM overlay.
+
+**Contrast is enforced by test, not by eye.** Soft low-contrast surfaces make
+legibility easy to break invisibly — one such bug once shipped, white text on a
+bright accent at ratio 1.58, caught only by measuring in the browser. The suite
+**parses `tokens.css` itself** rather than keeping a hand-copied palette, so a
+palette change cannot pass a green suite while shipping unreadable text. 43 tests
+across every theme.
 See [UI_DESIGN_SYSTEM.md](docs/UI_DESIGN_SYSTEM.md).
 
 ---

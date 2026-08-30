@@ -65,13 +65,19 @@ export function Button({
     "inline-flex items-center justify-center gap-2 rounded-[var(--rs-radius-md)] font-semibold " +
     "transition-all duration-[var(--rs-duration-fast)] disabled:opacity-50 disabled:cursor-not-allowed";
 
+  // `rs-neu` gives the raised-by-default / pressed-in-on-:active neumorphic key
+  // behaviour (see global.css). Ghost has no elevation, so it opts out.
   const variants: Record<ButtonVariant, string> = {
-    primary: "hover:brightness-110 active:brightness-95",
-    secondary: "border hover:brightness-105 active:brightness-95",
+    primary: "rs-neu hover:brightness-110",
+    secondary: "rs-neu hover:brightness-105",
     ghost: "hover:opacity-80",
-    danger: "hover:brightness-110",
+    danger: "rs-neu hover:brightness-110",
   };
 
+  // Fills only — elevation comes from the `rs-neu` class so the :active press
+  // can override the box-shadow (an inline boxShadow would win over the class
+  // and defeat the depress). Primary/danger keep a faint accent ring via
+  // `--rs-glow`, layered under the class shadow through the ring only.
   const variantStyle: Record<ButtonVariant, Record<string, string>> = {
     primary: {
       background:
@@ -81,15 +87,10 @@ export function Button({
       // apply and the button inherited body ink — near-white on a bright
       // accent, which is unreadable.
       color: "var(--rs-accent-ink)",
-      boxShadow: "var(--rs-glow)",
     },
     secondary: {
       background: "var(--rs-surface-raised)",
-      borderColor: "var(--rs-line)",
       color: "var(--rs-ink)",
-      boxShadow: "var(--rs-shadow-raised)",
-      backdropFilter: "blur(var(--rs-glass-blur)) saturate(var(--rs-glass-saturate))",
-      WebkitBackdropFilter: "blur(var(--rs-glass-blur)) saturate(var(--rs-glass-saturate))",
     },
     ghost: { background: "transparent", color: "var(--rs-ink-muted)" },
     danger: {
@@ -97,7 +98,6 @@ export function Button({
         "linear-gradient(140deg, color-mix(in srgb, var(--rs-danger) 90%, white), var(--rs-danger))",
       // Dark ink on the light danger tone; white would fail contrast here too.
       color: "#2a0508",
-      boxShadow: "0 8px 26px color-mix(in srgb, var(--rs-danger) 30%, transparent)",
     },
   };
 
@@ -166,19 +166,21 @@ export function Field({ label, htmlFor, hint, error, required, children }: Field
   );
 }
 
-export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
+/* Inputs read as pressed INTO the surface — the neumorphic inset shadow
+   replaces the old border, so the whole form language stays soft. */
+const CONTROL_CLASS =
+  "w-full rounded-[var(--rs-radius-md)] px-3.5 py-2.5 text-[var(--rs-text-sm)] outline-none";
+const CONTROL_STYLE: Record<string, string> = {
+  background: "var(--rs-surface-sunken)",
+  color: "var(--rs-ink)",
+  boxShadow: "var(--rs-shadow-sunken)",
+};
+
+export function Input({ className, style, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className={cx(
-        "w-full rounded-[var(--rs-radius-md)] border px-3 py-2.5 text-[var(--rs-text-sm)] outline-none",
-        "transition-shadow duration-[var(--rs-duration-fast)]",
-        className,
-      )}
-      style={{
-        background: "var(--rs-surface-sunken)",
-        borderColor: "var(--rs-line)",
-        color: "var(--rs-ink)",
-      }}
+      className={cx(CONTROL_CLASS, "transition-shadow duration-[var(--rs-duration-fast)]", className)}
+      style={{ ...CONTROL_STYLE, ...style }}
       {...rest}
     />
   );
@@ -186,22 +188,12 @@ export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputEleme
 
 export function Select({
   className,
+  style,
   children,
   ...rest
 }: InputHTMLAttributes<HTMLSelectElement> & { children: ReactNode }) {
   return (
-    <select
-      className={cx(
-        "w-full rounded-[var(--rs-radius-md)] border px-3 py-2.5 text-[var(--rs-text-sm)] outline-none",
-        className,
-      )}
-      style={{
-        background: "var(--rs-surface-sunken)",
-        borderColor: "var(--rs-line)",
-        color: "var(--rs-ink)",
-      }}
-      {...rest}
-    >
+    <select className={cx(CONTROL_CLASS, className)} style={{ ...CONTROL_STYLE, ...style }} {...rest}>
       {children}
     </select>
   );
@@ -209,21 +201,13 @@ export function Select({
 
 export function Textarea({
   className,
+  style,
   ...rest
 }: InputHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
-      className={cx(
-        "w-full rounded-[var(--rs-radius-md)] border px-3 py-2.5 text-[var(--rs-text-sm)] outline-none",
-        className,
-      )}
-      style={{
-        background: "var(--rs-surface-sunken)",
-        borderColor: "var(--rs-line)",
-        color: "var(--rs-ink)",
-        minHeight: "7rem",
-        resize: "vertical",
-      }}
+      className={cx(CONTROL_CLASS, className)}
+      style={{ ...CONTROL_STYLE, minHeight: "7rem", resize: "vertical", ...style }}
       {...rest}
     />
   );
