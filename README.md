@@ -60,40 +60,37 @@ them is an environment variable set directly in Render's dashboard.
 
 ## The interface
 
-**Soft neumorphism on a matte clinical ground.** Every surface is extruded from —
-or pressed into — a single flat colour by a paired soft shadow: a faint light
-source top-left, a deeper shadow bottom-right. There is no translucency, no
-blur, no border; depth comes entirely from the light, and each panel shares the
-ground's exact colour, which is what makes the extrusion read as one continuous
-material. Buttons are raised keys that physically depress on press; inputs sit
-pressed into the surface.
+**Soft neumorphism on warm clinical ivory.** The palette is the register of a
+clinician's room — warm beige and paper tones, ink in a soft charcoal, and a
+muted medical blue for action. Every surface is extruded from, or pressed into,
+a single matte ground by a paired soft shadow: a white highlight top-left, a
+warm taupe shadow bottom-right. No translucency, no blur, no border; depth comes
+from the light, and each panel shares the ground's exact colour. Buttons are
+raised keys that physically depress on press; inputs sit pressed into the paper.
 
-The ground is deliberately near-neutral and matte. A strongly coloured surround
-shifts the apparent colour of whatever sits on it, and what sits on it here is a
-fundus photograph whose hue is part of the judgement — haemorrhages and exudates
-are read partly by colour. Imaging workstations specify a neutral surround for
-the same reason. Imagery keeps its own deep, near-black stage; only the chrome
-is neumorphic.
+**The chrome is light, but the imagery stays dark.** A fundus photograph is still
+judged against near-black — as on a lightbox or DICOM workstation — because its
+own colour is part of the read (haemorrhages and exudates are seen partly by
+hue). So the viewer and capture stages keep a deep, near-black ground while the
+surround stays calm and paper-warm. The clinician's room is light; the tissue
+under examination sits on the dark ground its colour is measured against.
 
-Four workspaces share the material but differ in accent and tint, because the
-work differs:
+Four workspaces share the material but differ in a muted medical accent and a
+subtly tinted ivory ground:
 
 | Role | Route | Accent | Character |
 |---|---|---|---|
-| Health worker | `/user/*` | lime `#a3e635` | highest contrast — used outdoors, one-handed |
-| Doctor | `/doctor/*` | periwinkle `#7aa2ff` | deepest ground — images judged against darkness |
-| Patient | `/patient/*` | lilac `#c9b6f7` | softest ground, larger type |
-| Admin | `/admin/*` | orchid `#e879f9` | densest, monitoring-oriented |
+| Health worker | `/user/*` | field blue `#2f66aa` | warmer, brighter ground for daylight |
+| Doctor | `/doctor/*` | navy `#3a6098` | cleanest ivory — the colour of medical trust |
+| Patient | `/patient/*` | indigo `#5f6bb0` | softest, lightest ground, larger type |
+| Admin | `/admin/*` | violet-indigo `#5a4f9e` | densest, monitoring-oriented |
 
-**No role accent may resemble a severity colour.** Accents sit in the blue-violet
-arc (lime for the field role, where daylight legibility outranks symmetry), a
-minimum of 39° from every severity hue, pinned by test — chrome that looks like
-a severity signal invites a misread of the one signal that must not be misread.
-The severity scale itself is unchanged: green → amber → orange → red is learned
-and clinically load-bearing, and restyling it for novelty would be a safety
-regression. (A latent bug surfaced during the redesign: the field worker's
-`data-role` was the role name `health_worker`, not the theme key `worker`, so its
-lime theme had never actually applied — now mapped and fixed.)
+**No role accent may resemble a severity colour.** Accents sit in the
+blue-to-indigo arc, a minimum of 35° from every severity hue, pinned by test —
+chrome that looks like a severity signal invites a misread of the one signal
+that must not be misread. The severity scale keeps its learned, load-bearing
+hues (green → amber → orange → red) but is **deepened** for legibility on the
+light ground — a contrast necessity on ivory, not a restyle.
 
 **Fit the fundus in the frame.** Right after capture, the operator can zoom and
 pan the image — buttons, mouse drag, or arrow keys — to seat the retina inside

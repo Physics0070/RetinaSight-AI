@@ -3,34 +3,37 @@
    Single source of truth for colour, elevation, typography, motion.
    Components reference these variables; never raw hex values.
 
-   VISUAL LANGUAGE — soft neumorphism on a matte clinical ground
-   -------------------------------------------------------------
-   Surfaces are extruded from — or pressed into — a single matte ground by a
-   paired soft shadow: a faint light source top-left, a deeper shadow
-   bottom-right. There is no translucency, no blur, no border; depth comes
-   entirely from the light. Every panel shares the ground's colour, which is
-   what makes the extrusion read as one continuous material.
+   VISUAL LANGUAGE — soft neumorphism on warm clinical ivory
+   ---------------------------------------------------------
+   A light, calm palette in the register of a clinician's room: warm ivory and
+   beige paper tones, ink in a soft charcoal, and a muted medical blue for
+   action. Surfaces are extruded from — or pressed into — a single matte ground
+   by a paired soft shadow: a white highlight top-left, a warm taupe shadow
+   bottom-right. No translucency, no blur, no border; depth comes from the
+   light, and every panel shares the ground's exact colour.
 
-   Why the ground is neutral and matte
-   -----------------------------------
-   A fundus photograph's own colour is part of the clinical judgement —
-   haemorrhages and exudates are read partly by hue — so the surround is kept
-   near-neutral, the standard for imaging workstations. Imagery itself still
-   sits on its own deep, near-black stage (see RetinalImageViewer /
-   CaptureInstrument); only the chrome is neumorphic.
+   Imagery keeps its own deep, near-black stage (see RetinalImageViewer /
+   CaptureInstrument). A fundus photograph is still judged against darkness, as
+   on a lightbox or DICOM workstation — only the CHROME is light. That split is
+   deliberate: the clinician's surround is calm and paper-warm, while the tissue
+   under examination sits on the dark ground its colour is read against.
+
+   Why the severity colours are DARKER than a dark theme's
+   -------------------------------------------------------
+   On a light ground, bright amber/teal/red have almost no contrast. The
+   severity scale is clinically load-bearing, so its HUES are unchanged —
+   green -> amber -> orange -> red — but each is deepened until it is legible on
+   ivory. That is a contrast necessity, not a restyle.
 
    Why role accents avoid the severity hues
    ----------------------------------------
-   An interface accent that resembles a severity signal invites a misread of
-   the one thing that must never be misread. Every role accent sits in the
-   blue-violet arc (or lime for the field role), well clear of the
-   green-amber-orange-red severity progression. The severity scale itself is
-   unchanged — those associations are learned and clinically load-bearing.
+   An accent that resembles a severity signal invites a misread of the one
+   thing that must never be misread. The accents sit in the blue-to-indigo arc,
+   a minimum of 35 degrees from every severity hue (teal, amber, orange, red).
 
-   ACCESSIBILITY CONSTRAINT: soft shadows must never cost legibility. Every
-   ink/surface and ink/accent pair is measured against WCAG AA by
-   `src/test/contrast.test.tsx`, which parses *this file* — so a palette change
-   cannot silently drift away from its own contrast guarantees.
+   ACCESSIBILITY CONSTRAINT: every ink/surface and ink/accent pair is measured
+   against WCAG AA by `src/test/contrast.test.tsx`, which parses *this file* —
+   so a palette change cannot silently drift from its own contrast guarantees.
    ========================================================================== */
 
 :root {
@@ -71,50 +74,51 @@
   --rs-retina-glow: #ffa76b;
   --rs-vitreous: #08080b;
 
-  /* ---- clinical risk scale ----
+  /* ---- clinical risk scale — deepened for legibility on the light ground ----
      Severity is ALWAYS paired with a label, glyph and position on the scale.
-     Colour never carries the meaning alone. */
-  --rs-risk-low: #2dd4bf;
-  --rs-risk-moderate: #fbbf24;
-  --rs-risk-high: #fb923c;
-  --rs-risk-urgent: #fb7185;
-  --rs-risk-low-wash: rgba(45, 212, 191, 0.14);
-  --rs-risk-moderate-wash: rgba(251, 191, 36, 0.14);
-  --rs-risk-high-wash: rgba(251, 146, 60, 0.14);
-  --rs-risk-urgent-wash: rgba(251, 113, 133, 0.16);
+     Colour never carries the meaning alone. Hues unchanged: teal-green ->
+     amber -> orange -> red. */
+  --rs-risk-low: #0e7d70;
+  --rs-risk-moderate: #9a6b16;
+  --rs-risk-high: #bf4a1e;
+  --rs-risk-urgent: #c62828;
+  --rs-risk-low-wash: rgba(14, 125, 112, 0.12);
+  --rs-risk-moderate-wash: rgba(154, 107, 22, 0.12);
+  --rs-risk-high-wash: rgba(191, 74, 30, 0.12);
+  --rs-risk-urgent-wash: rgba(198, 40, 40, 0.12);
 
-  /* ---- status ---- */
-  --rs-ok: #2dd4bf;
-  --rs-warn: #fbbf24;
-  --rs-danger: #fb7185;
-  --rs-info: #22d3ee;
+  /* ---- status (mirror the risk scale; used as text/icon tones) ---- */
+  --rs-ok: #0e7d70;
+  --rs-warn: #9a6b16;
+  --rs-danger: #c62828;
+  --rs-info: #1d6fa5;
 
-  /* ---- default theme: matte graphite ----
+  /* ---- default theme: warm clinical ivory ----
      surface == surface-raised: the panel and the ground are the SAME colour;
      depth is drawn by the paired shadow, not by a fill difference. */
-  --rs-surface: #20232b;
-  --rs-surface-raised: #20232b;
-  --rs-surface-sunken: #1a1d24;
-  --rs-ink: #eef0f6;
-  --rs-ink-muted: #a8adbd;
-  --rs-ink-subtle: #7c8194;
-  --rs-line: rgba(180, 186, 210, 0.09);
-  --rs-accent: #7aa2ff;
-  --rs-accent-ink: #0a1230;
+  --rs-surface: #ece6da;
+  --rs-surface-raised: #ece6da;
+  --rs-surface-sunken: #e3dccd;
+  --rs-ink: #34302a;
+  --rs-ink-muted: #5f584a;
+  --rs-ink-subtle: #7d7563;
+  --rs-line: rgba(120, 108, 84, 0.16);
+  --rs-accent: #3f6aa8;
+  --rs-accent-ink: #ffffff;
 
   /* ---- neumorphic light ----
-     The two shadows every raised/pressed surface is built from. Light source
-     is top-left; the deep shadow falls bottom-right. */
-  --rs-neu-light: rgba(255, 255, 255, 0.055);
-  --rs-neu-dark: rgba(0, 0, 0, 0.55);
+     A white highlight top-left, a warm taupe shadow bottom-right — the paper
+     equivalent of the dark theme's soft extrusion. */
+  --rs-neu-light: rgba(255, 255, 255, 0.9);
+  --rs-neu-dark: rgba(174, 158, 128, 0.45);
 
   /* ---- elevation (soft, paired) ---- */
   --rs-shadow-raised:
     6px 6px 14px var(--rs-neu-dark),
-    -6px -6px 14px var(--rs-neu-light);
+    -6px -6px 12px var(--rs-neu-light);
   --rs-shadow-panel:
     10px 10px 26px var(--rs-neu-dark),
-    -8px -8px 22px var(--rs-neu-light);
+    -8px -8px 20px var(--rs-neu-light);
   --rs-shadow-sunken:
     inset 4px 4px 9px var(--rs-neu-dark),
     inset -4px -4px 9px var(--rs-neu-light);
@@ -122,8 +126,8 @@
   /* Primary actions: the same soft extrusion plus a faint accent ring. */
   --rs-glow:
     6px 6px 14px var(--rs-neu-dark),
-    -6px -6px 14px var(--rs-neu-light),
-    0 0 0 1px color-mix(in srgb, var(--rs-accent) 30%, transparent);
+    -6px -6px 12px var(--rs-neu-light),
+    0 0 0 1px color-mix(in srgb, var(--rs-accent) 28%, transparent);
 
   /* Retained as no-ops: a few components still name these; the neumorphic
      theme has no blur, so they resolve to nothing rather than breaking. */
@@ -139,74 +143,73 @@
 
 /* ==========================================================================
    ROLE THEMES
-   One material, four grounds. Each keeps its own accent and a subtly tinted
-   matte base, because the work differs — but the soft-light language is shared.
+   One paper material, four warm grounds. Each keeps its own muted medical
+   accent and a subtly tinted ivory base — the work differs, but the calm,
+   clinical language is shared.
    ========================================================================== */
 
-/* HEALTH WORKER — field soft-UI.
-   Used one-handed, often outdoors. Lime is the one accent outside the
-   blue-violet arc: at equal saturation it carries the highest luminance of any
-   hue, which is what survives direct sunlight on a phone screen. */
+/* HEALTH WORKER — field paper.
+   Used one-handed, often outdoors: a slightly warmer, brighter ground and the
+   most saturated blue of the set, for legibility in daylight. */
 [data-role="worker"] {
-  --rs-surface: #1f231e;
-  --rs-surface-raised: #1f231e;
-  --rs-surface-sunken: #191c18;
-  --rs-ink: #eef4e9;
-  --rs-ink-muted: #aebaa4;
-  --rs-ink-subtle: #838f79;
-  --rs-line: rgba(176, 200, 160, 0.10);
-  --rs-accent: #a3e635;
-  --rs-accent-ink: #16300a;
-  --rs-neu-light: rgba(210, 232, 190, 0.05);
+  --rs-surface: #efe8d6;
+  --rs-surface-raised: #efe8d6;
+  --rs-surface-sunken: #e6dec9;
+  --rs-ink: #332f28;
+  --rs-ink-muted: #5e5646;
+  --rs-ink-subtle: #7b7260;
+  --rs-line: rgba(128, 112, 82, 0.16);
+  --rs-accent: #2f66aa;
+  --rs-accent-ink: #ffffff;
+  --rs-neu-dark: rgba(182, 164, 126, 0.45);
 }
 
-/* DOCTOR — imaging soft-UI.
-   The most neutral, slightly deeper ground of the four: chrome recedes so the
-   retinal image dominates. Periwinkle is roughly complementary to fundus
-   orange, so the chrome never reads as tissue. */
+/* DOCTOR — consulting-room ivory.
+   The cleanest, calmest ground: a professional navy-blue accent, the colour of
+   trust and of the medical field. Chrome recedes so the retinal image leads. */
 [data-role="doctor"] {
-  --rs-surface: #1b1e25;
-  --rs-surface-raised: #1b1e25;
-  --rs-surface-sunken: #16181e;
-  --rs-ink: #ecf0f7;
-  --rs-ink-muted: #a5acc0;
-  --rs-ink-subtle: #79809a;
-  --rs-line: rgba(160, 172, 205, 0.09);
-  --rs-accent: #7aa2ff;
-  --rs-accent-ink: #0a1230;
+  --rs-surface: #eee9df;
+  --rs-surface-raised: #eee9df;
+  --rs-surface-sunken: #e5dfd2;
+  --rs-ink: #322f2a;
+  --rs-ink-muted: #5d574b;
+  --rs-ink-subtle: #7a7364;
+  --rs-line: rgba(118, 108, 86, 0.15);
+  --rs-accent: #3a6098;
+  --rs-accent-ink: #ffffff;
 }
 
-/* PATIENT — calm soft-UI.
-   Deliberately the softest: larger type, a touch lighter ground, gentler
-   contrast. Lilac is low-arousal and sits nowhere near the severity scale. */
+/* PATIENT — calm paper.
+   The softest and lightest ground, larger type, a gentle indigo. Low-arousal
+   and nowhere near the severity scale — an anxious reader should never see
+   chrome that resembles a warning. */
 [data-role="patient"] {
-  --rs-surface: #262230;
-  --rs-surface-raised: #262230;
-  --rs-surface-sunken: #201c29;
-  --rs-ink: #f2eff7;
-  --rs-ink-muted: #bcb6c9;
-  --rs-ink-subtle: #928aa0;
-  --rs-line: rgba(206, 198, 224, 0.10);
-  --rs-accent: #c9b6f7;
-  --rs-accent-ink: #241442;
+  --rs-surface: #f2ede2;
+  --rs-surface-raised: #f2ede2;
+  --rs-surface-sunken: #eae3d6;
+  --rs-ink: #35302a;
+  --rs-ink-muted: #605849;
+  --rs-ink-subtle: #7f7663;
+  --rs-line: rgba(122, 110, 86, 0.15);
+  --rs-accent: #5f6bb0;
+  --rs-accent-ink: #ffffff;
 
   --rs-text-base: 1.0625rem;
   --rs-text-sm: 0.9375rem;
-  --rs-neu-light: rgba(226, 214, 240, 0.06);
+  --rs-neu-light: rgba(255, 255, 255, 0.92);
 }
 
-/* ADMIN — command-centre soft-UI.
-   Densest of the four. Orchid is the most saturated accent in the set, suited
-   to a monitoring surface where status changes must catch the eye. */
+/* ADMIN — command-desk greige.
+   Densest of the four, a slightly cooler ground, an indigo-violet accent —
+   the furthest from any severity hue, suited to a monitoring surface. */
 [data-role="admin"] {
-  --rs-surface: #231d2a;
-  --rs-surface-raised: #231d2a;
-  --rs-surface-sunken: #1d1823;
-  --rs-ink: #f0ecf7;
-  --rs-ink-muted: #b3aac2;
-  --rs-ink-subtle: #8d84a0;
-  --rs-line: rgba(196, 180, 220, 0.10);
-  --rs-accent: #e879f9;
-  --rs-accent-ink: #2d0838;
-  --rs-neu-light: rgba(228, 208, 240, 0.055);
+  --rs-surface: #e9e4d8;
+  --rs-surface-raised: #e9e4d8;
+  --rs-surface-sunken: #e0dacb;
+  --rs-ink: #322e2a;
+  --rs-ink-muted: #5c554a;
+  --rs-ink-subtle: #797162;
+  --rs-line: rgba(120, 108, 88, 0.16);
+  --rs-accent: #5a4f9e;
+  --rs-accent-ink: #ffffff;
 }

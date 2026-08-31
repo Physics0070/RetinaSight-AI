@@ -95,9 +95,9 @@ export function Button({
     ghost: { background: "transparent", color: "var(--rs-ink-muted)" },
     danger: {
       background:
-        "linear-gradient(140deg, color-mix(in srgb, var(--rs-danger) 90%, white), var(--rs-danger))",
-      // Dark ink on the light danger tone; white would fail contrast here too.
-      color: "#2a0508",
+        "linear-gradient(140deg, color-mix(in srgb, var(--rs-danger) 88%, white), var(--rs-danger))",
+      // White on the deep clinical red — the conventional, legible pairing.
+      color: "#ffffff",
     },
   };
 

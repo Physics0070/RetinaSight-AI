@@ -11,19 +11,22 @@ generic SaaS dashboard. Three ideas carry that:
 
 ## The material
 
-Every workspace is a **matte, neutral ground** from which panels are extruded —
-or into which controls are pressed — by a single paired soft shadow. No
-translucency, no blur, no border: depth comes entirely from the light. The
-defining rule of neumorphism is that a panel is the **same colour as the
-ground**; only the shadow separates them, which is what makes the whole surface
-read as one continuous material rather than a stack of cards.
+Every workspace is a **warm ivory paper ground** from which panels are extruded —
+or into which controls are pressed — by a single paired soft shadow: a white
+highlight top-left, a warm taupe shadow bottom-right. No translucency, no blur,
+no border: depth comes entirely from the light. The defining rule of neumorphism
+is that a panel is the **same colour as the ground**; only the shadow separates
+them, which is what makes the whole surface read as one continuous material
+rather than a stack of cards. The register is a clinician's room — beige and
+paper tones, soft-charcoal ink, a muted medical blue for action.
 
 The ground is near-neutral by design. A strongly tinted surround shifts the
 apparent colour of whatever sits on it (simultaneous contrast), and what sits on
 it here is a fundus photograph whose hue is part of the clinical judgement —
 haemorrhages and exudates are read partly by colour. Imaging workstations
-specify a neutral surround for exactly this reason. Imagery keeps its own deep,
-near-black stage; only the chrome is neumorphic.
+specify a neutral surround for exactly this reason. The chrome is light and
+paper-warm, but imagery keeps its own deep, near-black stage — the fundus is
+read against darkness even while the clinician's surround is calm ivory.
 
 Two shadows build every surface — a light source top-left, a deeper shadow
 bottom-right:
@@ -36,8 +39,8 @@ bottom-right:
 
 ```css
 :root {
-  --rs-neu-light: rgba(255, 255, 255, 0.055);   /* top-left highlight */
-  --rs-neu-dark:  rgba(0, 0, 0, 0.55);           /* bottom-right shadow */
+  --rs-neu-light: rgba(255, 255, 255, 0.9);    /* top-left white highlight */
+  --rs-neu-dark:  rgba(174, 158, 128, 0.45);   /* warm taupe shadow */
 }
 .rs-panel {
   background: var(--rs-surface-raised);          /* == the ground colour */
@@ -49,9 +52,10 @@ bottom-right:
 ```
 
 There is no gradient or grid behind the panels — a flat, uniform ground is what
-lets the soft shadows read. (The previous version of this system was a frosted
-**glassmorphism**: translucent `backdrop-filter` panels over a lit, gridded
-ground. It was replaced wholesale by the neumorphic material above.)
+lets the soft shadows read. (This system began as a frosted **glassmorphism** — translucent `backdrop-filter`
+panels over a lit, gridded ground — then a dark neumorphism, and is now the light
+ivory neumorphism above. Only the palette and material moved; the structure and
+components are unchanged across all three.)
 
 ---
 
@@ -67,10 +71,10 @@ workspaces.
 
 | Role | Accent | Ground | Character |
 |---|---|---|---|
-| **Health worker** | lime `#a3e635` | `#1f231e` | highest contrast, largest controls — used outdoors, one-handed |
-| **Doctor** | periwinkle `#7aa2ff` | `#1b1e25` | darkest of the four; retinal images must be judged against darkness |
-| **Patient** | lilac `#c9b6f7` | `#262230` | softest ground, larger type — an anxious reader shouldn't decode an interface |
-| **Admin** | orchid `#e879f9` | `#231d2a` | densest, monitoring-oriented |
+| **Health worker** | field blue `#2f66aa` | `#efe8d6` | warmer, brighter ground — used outdoors, one-handed |
+| **Doctor** | navy `#3a6098` | `#eee9df` | cleanest ivory; the colour of medical trust |
+| **Patient** | indigo `#5f6bb0` | `#f2ede2` | softest, lightest ground, larger type — an anxious reader shouldn't decode an interface |
+| **Admin** | violet-indigo `#5a4f9e` | `#e9e4d8` | densest, monitoring-oriented |
 
 One material, four densities. The work genuinely differs — a nurse in a field
 clinic and a clinician at a workstation are not doing the same job — but they now
@@ -84,13 +88,17 @@ the low-risk colour `#2dd4bf`, and the patient accent `#ffa76b` sat **3°** from
 the high-risk colour `#fb923c`. Interface chrome that resembles a severity
 signal invites a misread of the one signal that must never be misread.
 
-Every accent now sits at least **35°** from every severity hue — the tightest
-actual margin is the field role's lime against moderate amber, at 39°. Lime is
-the one accent outside the blue-violet arc, deliberately: at equal saturation it
-carries the highest luminance of any hue, which is what survives direct sunlight
-on a phone screen, and daylight legibility outranks palette symmetry for that
-role. The rule is enforced by test, including a guard-the-guard case pinning the
-two historical failures.
+Every accent now sits in the **blue-to-indigo arc**, at least **35°** from every
+severity hue — the tightest actual margin is the field-worker blue against the
+deepened low-risk teal, at ~42°. Blue reads as medical trust and, unlike a warm
+bronze or gold, stays clear of the amber/orange severity band. The rule is
+enforced by test, including a guard-the-guard case pinning the two historical
+failures.
+
+On the light ivory ground the severity colours themselves are **deepened** —
+same learned hues (green → amber → orange → red), darker so they clear the
+≥3.0 contrast bar on paper. That is a legibility requirement of the light
+theme, not a restyle of a clinically load-bearing scale.
 
 ### A bug this palette work uncovered
 

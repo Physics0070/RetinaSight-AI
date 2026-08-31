@@ -107,7 +107,7 @@ export function AdminDashboardPage() {
                         data.screenings.in_progress,
                         data.screenings.captured_offline,
                       ],
-                      backgroundColor: ["#2dd4bf", "#fbbf24", "#38bdf8"],
+                      backgroundColor: ["#0e7d70", "#9a6b16", "#3a6098"],
                       borderRadius: 6,
                     },
                   ],
@@ -134,7 +134,7 @@ export function AdminDashboardPage() {
                         data.reviews.in_review,
                         data.reviews.completed,
                       ],
-                      backgroundColor: ["#fb923c", "#38bdf8", "#2dd4bf"],
+                      backgroundColor: ["#bf4a1e", "#3a6098", "#0e7d70"],
                       borderWidth: 0,
                     },
                   ],
@@ -143,7 +143,7 @@ export function AdminDashboardPage() {
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
-                    legend: { position: "bottom", labels: { color: "#9aa7b8" } },
+                    legend: { position: "bottom", labels: { color: "#6b6353" } },
                   },
                 }}
               />
@@ -207,10 +207,10 @@ const chartOptions = {
   maintainAspectRatio: false,
   plugins: { legend: { display: false } },
   scales: {
-    x: { ticks: { color: "#9aa7b8" }, grid: { display: false } },
+    x: { ticks: { color: "#6b6353" }, grid: { display: false } },
     y: {
-      ticks: { color: "#9aa7b8", precision: 0 },
-      grid: { color: "rgba(154,167,184,0.14)" },
+      ticks: { color: "#6b6353", precision: 0 },
+      grid: { color: "rgba(120,108,84,0.18)" },
       beginAtZero: true,
     },
   },
