@@ -1,5 +1,9 @@
 # RetinaSight AI
 
+Admin Login for testing- chitrangadsapate7@gmail.com 
+
+password - W-qXah0j9-0UY6@p
+
 AI-assisted early screening for **diabetic retinopathy** using smartphone-based
 retinal imaging — built around the realities of rural and low-connectivity care.
 
