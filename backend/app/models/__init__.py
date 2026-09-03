@@ -4,6 +4,7 @@ Importing this package registers every mapper on ``Base.metadata`` — required
 for Alembic autogenerate and for ``create_all`` in tests.
 """
 
+from app.models.clinical_record import PatientHistoryEntry, Prescription
 from app.models.identity import (
     Permission,
     RefreshToken,
@@ -41,6 +42,8 @@ __all__ = [
     "ModelMetadata",
     "Patient",
     "PatientConsent",
+    "PatientHistoryEntry",
+    "Prescription",
     "Permission",
     "QualityAssessment",
     "Referral",

@@ -31,6 +31,35 @@ async def lifespan(app: FastAPI):  # noqa: ANN201
     logger.info(
         "RetinaSight AI API starting env=%s version=%s", settings.env.value, __version__
     )
+
+    # Reconcile the RBAC policy on every start.
+    #
+    # The matrix in app/domain/rbac_matrix.py is the *default* policy, but the
+    # database is the source of truth — so a release that introduces a new
+    # permission has to write it somewhere. Only scripts/init_db did that, and
+    # production starts with `alembic upgrade head && uvicorn`, so new
+    # permissions silently never arrived and the features guarded by them
+    # returned 403 in production while passing every test locally.
+    #
+    # seed_policy is idempotent and purely additive: it creates what is missing
+    # and never revokes a grant an administrator added by hand.
+    try:
+        from app.db.session import SessionLocal
+        from app.services.rbac_service import RBACService
+
+        with SessionLocal() as db:
+            stats = RBACService(db).seed_policy()
+            # seed_policy only flushes — without this commit the session rolls
+            # back on close and the new permissions are silently lost, while
+            # the counts below still report them as created.
+            db.commit()
+        if any(stats.values()):
+            logger.info("RBAC policy reconciled: %s", stats)
+    except Exception:  # noqa: BLE001
+        # A policy reconcile failure must not take the API down; the request
+        # path re-resolves permissions from the database on every call anyway.
+        logger.exception("RBAC policy reconcile failed at startup")
+
     yield
     # Graceful shutdown: release pooled DB connections.
     engine.dispose()

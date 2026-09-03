@@ -10,6 +10,7 @@ from app.api.v1.routers import (
     clinical,
     images,
     patients,
+    records,
     screenings,
     sync,
     users,
@@ -26,6 +27,7 @@ api_router.include_router(patients.router)
 api_router.include_router(screenings.router)
 api_router.include_router(images.router)
 api_router.include_router(clinical.router)
+api_router.include_router(records.router)
 
 # Offline sync
 api_router.include_router(sync.router)

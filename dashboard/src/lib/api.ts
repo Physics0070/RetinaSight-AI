@@ -183,6 +183,8 @@ export const api = {
     request<T>(path, { method: "POST", body, query }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
+  // Deletes answer 204 with no body; `request` already returns undefined there.
+  del: <T = void>(path: string) => request<T>(path, { method: "DELETE" }),
   upload: <T>(path: string, formData: FormData) =>
     request<T>(path, { method: "POST", formData }),
   anonymousPost: <T>(path: string, body: unknown) =>

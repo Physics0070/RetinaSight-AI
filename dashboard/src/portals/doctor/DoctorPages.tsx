@@ -88,7 +88,13 @@ export function DoctorPatients() {
               {patients.data.items.map((patient) => (
                 <tr key={patient.id}>
                   <Td>
-                    <span className="font-semibold">{patient.full_name}</span>
+                    <Link
+                      to={`/doctor/patients/${patient.id}`}
+                      className="font-semibold underline-offset-2 hover:underline"
+                      style={{ color: "var(--rs-accent)" }}
+                    >
+                      {patient.full_name}
+                    </Link>
                   </Td>
                   <Td>
                     <span className="rs-numeric">{patient.patient_code}</span>

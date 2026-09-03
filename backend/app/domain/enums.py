@@ -42,6 +42,13 @@ class Permission(StrEnum):
     PATIENT_VIEW = "PATIENT_VIEW"
     PATIENT_CREATE = "PATIENT_CREATE"
     PATIENT_UPDATE = "PATIENT_UPDATE"
+    # Medical history and prescribing are separated from general patient edit:
+    # registering a patient and writing their clinical record are different
+    # privileges, and prescribing is narrower still.
+    HISTORY_VIEW = "HISTORY_VIEW"
+    HISTORY_MANAGE = "HISTORY_MANAGE"
+    PRESCRIPTION_VIEW = "PRESCRIPTION_VIEW"
+    PRESCRIPTION_WRITE = "PRESCRIPTION_WRITE"
     SCREENING_CREATE = "SCREENING_CREATE"
     SCREENING_VIEW = "SCREENING_VIEW"
     IMAGE_VIEW = "IMAGE_VIEW"
@@ -69,6 +76,31 @@ class ConsentType(StrEnum):
     SCREENING = "screening"
     DATA_STORAGE = "data_storage"
     REFERRAL_SHARING = "referral_sharing"
+
+
+# --------------------------------------------------------------------------- #
+# Clinical record
+# --------------------------------------------------------------------------- #
+class HistoryEntryType(StrEnum):
+    """What kind of fact a medical-history entry records.
+
+    Typed rather than free-text so the record can be grouped and filtered, and
+    so an allergy is never lost inside a general note.
+    """
+
+    CONDITION = "condition"
+    MEDICATION = "medication"
+    ALLERGY = "allergy"
+    PROCEDURE = "procedure"
+    FAMILY_HISTORY = "family_history"
+    OBSERVATION = "observation"
+    NOTE = "note"
+
+
+class PrescriptionStatus(StrEnum):
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    DISCONTINUED = "discontinued"
 
 
 # --------------------------------------------------------------------------- #
@@ -264,6 +296,11 @@ class AuditAction(StrEnum):
     PATIENT_CREATED = "patient_created"
     PATIENT_UPDATED = "patient_updated"
     CONSENT_RECORDED = "consent_recorded"
+    HISTORY_ENTRY_ADDED = "history_entry_added"
+    HISTORY_ENTRY_UPDATED = "history_entry_updated"
+    HISTORY_ENTRY_REMOVED = "history_entry_removed"
+    PRESCRIPTION_ISSUED = "prescription_issued"
+    PRESCRIPTION_UPDATED = "prescription_updated"
     SCREENING_STARTED = "screening_started"
     IMAGE_CAPTURED = "image_captured"
     IMAGE_UPLOADED = "image_uploaded"

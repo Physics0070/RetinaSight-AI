@@ -26,15 +26,15 @@ and a clinician who stays in the loop by design.
 ## Status
 
 ```
-306 tests passing    157 backend · 88 frontend · 35 ML · 26 mobile
-Scanner              220 files, no hardcoded config or secrets
+327 tests passing    169 backend · 97 frontend · 35 ML · 26 mobile
+Scanner              228 files, no hardcoded config or secrets
 Trained model        quadratic kappa 0.932 · referable sensitivity 0.914
 ```
 
 | Component | Stack | Status |
 |---|---|---|
-| `backend/` | FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL | 60 endpoints, 157 tests |
-| `dashboard/` | React 18 · TypeScript · Vite · Tailwind | 4 portals, 88 tests |
+| `backend/` | FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL | 68 endpoints, 169 tests |
+| `dashboard/` | React 18 · TypeScript · Vite · Tailwind | 4 portals, 97 tests |
 | `ml/` | PyTorch · ONNX · Grad-CAM | trained model included |
 | `mobile/` | Flutter · SQLCipher · camera | analyzes clean, 26 tests |
 | `scripts/` | hardcoding & secret scanner | runs inside the test suite |
@@ -101,6 +101,23 @@ pan the image — buttons, mouse drag, or arrow keys — to seat the retina insi
 the alignment reticle before the quality gate runs, so a photo framed slightly
 too small or off-centre is salvaged rather than retaken. The doctor's review
 viewer has the same controls plus layer toggles for the Grad-CAM overlay.
+
+**The clinical record.** Opening a patient from the doctor's list shows their
+medical history — typed entries (condition, medication, allergy, procedure,
+family history, observation, note) the clinician can add, correct and retire —
+and the prescriptions written for them. From there, *Prescribe medicine* composes
+a prescription line by line.
+
+Three decisions worth knowing:
+
+- **Corrections retire, they do not erase.** Removing an entry soft-deletes it,
+  so what was once recorded survives for audit. The confirm dialog says so.
+- **Authority is separated by permission, not by hiding buttons.** A field worker
+  may *read* history for context at capture time but never write it, and cannot
+  prescribe at all; an administrator gets read-only oversight, because an
+  administrator is not a clinician. All of it is enforced server-side and tested.
+- **The AI does not prescribe.** Every prescription is composed by, and recorded
+  against, a named clinician. The model screens and explains; a person decides.
 
 **Contrast is enforced by test, not by eye.** Soft low-contrast surfaces make
 legibility easy to break invisibly — one such bug once shipped, white text on a
@@ -350,8 +367,8 @@ container filesystem is ephemeral, so patient images would be lost on deploy.
 ## Testing
 
 ```bash
-cd backend    && python -m pytest          # 157
-cd dashboard  && npm test                  # 87
+cd backend    && python -m pytest          # 169
+cd dashboard  && npm test                  # 97
 cd ml         && python -m pytest tests/   # 35
 cd mobile     && flutter test              # 26
 python scripts/check_no_hardcoding.py

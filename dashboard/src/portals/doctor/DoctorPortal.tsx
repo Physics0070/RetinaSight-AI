@@ -11,6 +11,8 @@ import { PortalShell, type NavItem } from "@/app/PortalShell";
 import { DoctorDashboard } from "./DoctorDashboard";
 import { RiskQueue } from "./RiskQueue";
 import { CaseReview } from "./CaseReview";
+import { PatientRecord } from "./PatientRecord";
+import { Prescribe } from "./Prescribe";
 import {
   DoctorAudit,
   DoctorFollowUps,
@@ -41,7 +43,8 @@ export function DoctorPortal() {
         <Route path="reviews" element={<DoctorReviews />} />
         <Route path="reviews/:reviewId" element={<CaseReview />} />
         <Route path="patients" element={<DoctorPatients />} />
-        <Route path="patients/:patientId" element={<DoctorPatients />} />
+        <Route path="patients/:patientId" element={<PatientRecord />} />
+        <Route path="patients/:patientId/prescribe" element={<Prescribe />} />
         <Route path="referrals" element={<DoctorReferrals />} />
         <Route path="follow-ups" element={<DoctorFollowUps />} />
         <Route path="audit" element={<DoctorAudit />} />

@@ -383,3 +383,54 @@ export interface SyncQueueEntry {
   device_id: string | null;
   created_at: string;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Clinical record — medical history and prescriptions                        */
+/* -------------------------------------------------------------------------- */
+export type HistoryEntryType =
+  | "condition"
+  | "medication"
+  | "allergy"
+  | "procedure"
+  | "family_history"
+  | "observation"
+  | "note";
+
+export interface HistoryEntry {
+  id: string;
+  patient_id: string;
+  entry_type: HistoryEntryType;
+  title: string;
+  detail: string | null;
+  /** When the event happened clinically — distinct from when it was typed in. */
+  occurred_on: string | null;
+  status: string | null;
+  recorded_by_user_id: string | null;
+  updated_by_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PrescriptionStatus = "active" | "completed" | "discontinued";
+
+export interface PrescriptionItem {
+  name: string;
+  dose: string;
+  frequency: string;
+  duration?: string | null;
+  instructions?: string | null;
+}
+
+export interface Prescription {
+  id: string;
+  patient_id: string;
+  session_id: string | null;
+  prescribed_by_user_id: string | null;
+  items: PrescriptionItem[];
+  diagnosis: string | null;
+  notes: string | null;
+  status: PrescriptionStatus;
+  valid_until: string | null;
+  created_at: string;
+  updated_at: string;
+}

@@ -38,6 +38,10 @@ PERMISSION_DESCRIPTIONS: dict[P, tuple[str, str]] = {
     P.PATIENT_VIEW: ("View patient records", "patient"),
     P.PATIENT_CREATE: ("Register new patients", "patient"),
     P.PATIENT_UPDATE: ("Update patient records", "patient"),
+    P.HISTORY_VIEW: ("View a patient's medical history", "clinical"),
+    P.HISTORY_MANAGE: ("Add, edit and remove medical-history entries", "clinical"),
+    P.PRESCRIPTION_VIEW: ("View prescriptions", "clinical"),
+    P.PRESCRIPTION_WRITE: ("Write and revise prescriptions", "clinical"),
     P.SCREENING_CREATE: ("Start and conduct screenings", "screening"),
     P.SCREENING_VIEW: ("View screening sessions", "screening"),
     P.IMAGE_VIEW: ("View retinal images", "imaging"),
@@ -72,9 +76,16 @@ DEFAULT_ROLE_PERMISSIONS: dict[RoleName, list[P]] = {
         P.SCREENING_VIEW,
         P.REFERRAL_VIEW,
         P.RISK_VIEW,
+        # Oversight is read-only: an administrator is not a clinician and is
+        # deliberately given no authority to write history or prescribe.
+        P.HISTORY_VIEW,
+        P.PRESCRIPTION_VIEW,
     ],
     RoleName.HEALTH_WORKER: [
         P.PATIENT_CREATE,
+        # Read-only: history informs capture and referral, but a field worker
+        # does not author the clinical record and never prescribes.
+        P.HISTORY_VIEW,
         P.PATIENT_VIEW,
         P.PATIENT_UPDATE,
         P.SCREENING_CREATE,
@@ -91,6 +102,11 @@ DEFAULT_ROLE_PERMISSIONS: dict[RoleName, list[P]] = {
     ],
     RoleName.DOCTOR: [
         P.PATIENT_VIEW,
+        # The clinical record is the doctor's to read, write and prescribe from.
+        P.HISTORY_VIEW,
+        P.HISTORY_MANAGE,
+        P.PRESCRIPTION_VIEW,
+        P.PRESCRIPTION_WRITE,
         P.SCREENING_VIEW,
         P.IMAGE_VIEW,
         P.EXPLANATION_VIEW,
