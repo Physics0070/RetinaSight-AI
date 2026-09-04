@@ -78,6 +78,10 @@ export default defineConfig(({ mode }) => {
       globals: true,
       setupFiles: ["./src/test/setup.ts"],
       css: false,
+      // Must exceed the Testing Library async timeout set in setup.ts, or a
+      // test hits Vitest's cap first and reports a timeout instead of the
+      // assertion that actually failed.
+      testTimeout: 20_000,
     },
   } as never;
 });
