@@ -81,3 +81,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.log
+
+# Generated deployment bundles (scripts/package_hf_space.py)
+/build/

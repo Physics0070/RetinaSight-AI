@@ -56,6 +56,8 @@ after ~15 minutes idle, and the database is on Render's free plan, which
 expires 30 days after creation — both are one-line plan upgrades in
 `render.yaml` when the project outgrows them.
 
+**Free, non-expiring alternative:** [docs/FREE_DEPLOYMENT.md](docs/FREE_DEPLOYMENT.md) deploys the same code on Cloudflare Pages + Hugging Face Spaces + Neon + Backblaze B2 at no cost, avoiding both Render free-tier limits above. Demo data only. Update the URLs in the table once deployed.
+
 No credential of any kind (admin login, object-storage keys, JWT/signing
 secrets, database connection string) lives in this repository — every one of
 them is an environment variable set directly in Render's dashboard.
