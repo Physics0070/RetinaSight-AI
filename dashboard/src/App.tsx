@@ -8,16 +8,24 @@
 
 import { Route, Routes } from "react-router-dom";
 
+import { Landing } from "@/app/Landing";
 import { LoginPage } from "@/app/LoginPage";
 import { RequireAuth, RequireRole, RoleLanding } from "@/app/RouteGuards";
+import { useAuth } from "@/lib/auth";
 import { AdminPortal } from "@/portals/admin/AdminPortal";
 import { DoctorPortal } from "@/portals/doctor/DoctorPortal";
 import { PatientPortal } from "@/portals/patient/PatientPortal";
 import { WorkerPortal } from "@/portals/worker/WorkerPortal";
 
+function Home() {
+  const { status } = useAuth();
+  return status === "anonymous" ? <Landing /> : <RoleLanding />;
+}
+
 export function App() {
   return (
     <Routes>
+      <Route path="/" element={<Home />} />
       <Route path="/login" element={<LoginPage />} />
 
       <Route

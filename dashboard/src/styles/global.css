@@ -217,3 +217,8 @@
     scroll-behavior: auto !important;
   }
 }
+
+@media print {
+  .rs-no-print, nav, aside, header { display: none !important; }
+  body { background: #fff !important; }
+}

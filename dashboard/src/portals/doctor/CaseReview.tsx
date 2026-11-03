@@ -7,7 +7,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { PageHeader } from "@/app/PageHeader";
 import {
@@ -173,6 +173,11 @@ export function CaseReview() {
         backLabel="Risk queue"
         actions={
           <>
+            {sessionId && (
+              <Link to={`/doctor/reports/${sessionId}`}>
+                <Button variant="ghost">Report</Button>
+              </Link>
+            )}
             {!alreadyReviewed && review.data?.status !== "in_review" && (
               <Button loading={claim.loading} onClick={() => void claim.run()}>
                 Claim case

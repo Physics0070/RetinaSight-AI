@@ -13,6 +13,7 @@ import { RiskQueue } from "./RiskQueue";
 import { CaseReview } from "./CaseReview";
 import { PatientRecord } from "./PatientRecord";
 import { Prescribe } from "./Prescribe";
+import { ScreeningReport } from "./ScreeningReport";
 import {
   DoctorAudit,
   DoctorFollowUps,
@@ -45,6 +46,7 @@ export function DoctorPortal() {
         <Route path="patients" element={<DoctorPatients />} />
         <Route path="patients/:patientId" element={<PatientRecord />} />
         <Route path="patients/:patientId/prescribe" element={<Prescribe />} />
+        <Route path="reports/:sessionId" element={<ScreeningReport />} />
         <Route path="referrals" element={<DoctorReferrals />} />
         <Route path="follow-ups" element={<DoctorFollowUps />} />
         <Route path="audit" element={<DoctorAudit />} />

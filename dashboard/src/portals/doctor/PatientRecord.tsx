@@ -28,6 +28,7 @@ import {
 } from "@/design-system/components/primitives";
 import { api } from "@/lib/api";
 import { useQuery } from "@/lib/useApi";
+import { PatientTrend } from "./PatientTrend";
 import type {
   HistoryEntry,
   HistoryEntryType,
@@ -207,6 +208,8 @@ export function PatientRecord() {
           </div>
         </Panel>
       )}
+
+      <PatientTrend patientId={patientId} />
 
       {problem && <ErrorState message={problem} />}
 
