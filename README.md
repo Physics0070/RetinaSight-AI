@@ -6,7 +6,7 @@
 
 `FastAPI` · `React 18` · `TypeScript` · `PyTorch → ONNX` · `Grad-CAM` · `Flutter` · `react-three-fiber`
 
-[Quick start](#quick-start) · [Features](#features) · [The model](#the-model) · [Deployment](#live-deployment) · [Docs](#documentation)
+[Quick start](#quick-start) · [Features](#features) · [The model](#the-model) · [Deployment](docs/FREE_DEPLOYMENT.md) · [Docs](#documentation)
 
 </div>
 
@@ -61,33 +61,6 @@ Trained model        quadratic kappa 0.932 · referable sensitivity 0.914
 | `ml/` | PyTorch · ONNX · Grad-CAM | trained model included |
 | `mobile/` | Flutter · SQLCipher · camera | analyzes clean, 26 tests |
 | `scripts/` | hardcoding & secret scanner | runs inside the test suite |
-
----
-
-## Live deployment
-
-> **Heads up:** no live deployment is currently confirmed. The Render URLs below
-> are from an earlier deploy and may be dead; the Render services are not in the
-> maintainer's current account. Use the free path below for a fresh, non-expiring deploy.
-
-| Service | URL |
-|---|---|
-| Dashboard | https://retinasight-dashboard.onrender.com |
-| API | https://retinasight-api.onrender.com — health at `/health/ready`, `/docs` disabled in production |
-| Database | Managed PostgreSQL on Render, private networking only — no public endpoint |
-
-Deployed from the committed `render.yaml` Blueprint; see
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the procedure. Two free-tier
-trade-offs are live and intentional for now: the API cold-starts (30–60s)
-after ~15 minutes idle, and the database is on Render's free plan, which
-expires 30 days after creation — both are one-line plan upgrades in
-`render.yaml` when the project outgrows them.
-
-**Free, non-expiring alternative:** [docs/FREE_DEPLOYMENT.md](docs/FREE_DEPLOYMENT.md) deploys the same code on Cloudflare Pages + Hugging Face Spaces + Neon + Backblaze B2 at no cost, avoiding both Render free-tier limits above. Demo data only. Update the URLs in the table once deployed.
-
-No credential of any kind (admin login, object-storage keys, JWT/signing
-secrets, database connection string) lives in this repository — every one of
-them is an environment variable set directly in Render's dashboard.
 
 ---
 
@@ -420,6 +393,7 @@ python scripts/check_no_hardcoding.py
 | [UI_DESIGN_SYSTEM.md](docs/UI_DESIGN_SYSTEM.md) | Glass material, tokens, contrast, accessibility |
 | [TESTING.md](docs/TESTING.md) | What is tested and how to extend it |
 | **[TRAINING_A_REAL_MODEL.md](docs/TRAINING_A_REAL_MODEL.md)** | **Getting a trained model into the system** |
+| [FREE_DEPLOYMENT.md](docs/FREE_DEPLOYMENT.md) | Free, non-expiring deploy (Cloudflare Pages, Hugging Face, Neon) |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Render blueprint, environment setup, rollback |
 
 ---
