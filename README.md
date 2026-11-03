@@ -1,11 +1,17 @@
-# RetinaSight AI
+<div align="center">
 
-Admin Login for testing- chitrangadsapate7@gmail.com 
+# 👁️ RetinaSight AI
 
-password - W-qXah0j9-0UY6@p
+**AI-assisted early screening for diabetic retinopathy, built for rural and low-connectivity care.**
 
-AI-assisted early screening for **diabetic retinopathy** using smartphone-based
-retinal imaging — built around the realities of rural and low-connectivity care.
+`FastAPI` · `React 18` · `TypeScript` · `PyTorch → ONNX` · `Grad-CAM` · `Flutter` · `react-three-fiber`
+
+[Quick start](#quick-start) · [Features](#features) · [The model](#the-model) · [Deployment](#live-deployment) · [Docs](#documentation)
+
+</div>
+
+RetinaSight AI screens for **diabetic retinopathy** using smartphone-based retinal
+imaging, built around the realities of rural and low-connectivity care.
 
 > **Scope.** RetinaSight AI is a *screening and referral-support* system. It is
 > **not** an autonomous diagnostic device. Every screening is reviewed by a
@@ -23,10 +29,27 @@ and a clinician who stays in the loop by design.
 
 ---
 
+## Features
+
+| | Feature | What it does |
+|---|---|---|
+| 🎬 | **Cinematic landing** | Scroll-driven 3D film: the eye pushes through the pupil into a retina, an AI heatmap lights its lesions, then it pulls back to a referral result. Lazy-loaded, built with react-three-fiber. |
+| 📷 | **Guided capture + quality gate** | Zoom/pan to seat the retina in the reticle; a rejected image never reaches the model. |
+| 🧠 | **Explainable AI screening** | 5-class DR grading with an exact Grad-CAM heatmap baked into the ONNX graph. |
+| 🚦 | **Risk and referral routing** | Low confidence raises risk, never lowers it. Every case reaches a clinician's queue. |
+| 🩺 | **Doctor workstation** | Risk queue, case review with image layers, referrals, follow-ups. |
+| 📈 | **Patient trend and compare** | Grade-over-time chart and side-by-side visit comparison on the patient record. |
+| 📄 | **Printable screening report** | One-click report per screening (Save as PDF), always carrying the not-a-diagnosis notice. |
+| 💊 | **Clinical record** | Editable medical history and prescribing; corrections retire entries, never erase them. |
+| 📡 | **Offline-first** | Capture without a connection; idempotent sync when it returns. |
+| 🛡️ | **Four role workspaces** | Health worker, doctor, patient, admin: separate routes, permissions enforced server-side. |
+
+---
+
 ## Status
 
 ```
-327 tests passing    169 backend · 97 frontend · 35 ML · 26 mobile
+331 tests passing    169 backend · 101 frontend · 35 ML · 26 mobile
 Scanner              228 files, no hardcoded config or secrets
 Trained model        quadratic kappa 0.932 · referable sensitivity 0.914
 ```
@@ -34,7 +57,7 @@ Trained model        quadratic kappa 0.932 · referable sensitivity 0.914
 | Component | Stack | Status |
 |---|---|---|
 | `backend/` | FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL | 68 endpoints, 169 tests |
-| `dashboard/` | React 18 · TypeScript · Vite · Tailwind | 4 portals, 97 tests |
+| `dashboard/` | React 18 · TypeScript · Vite · Tailwind | 4 portals + landing film, 101 tests |
 | `ml/` | PyTorch · ONNX · Grad-CAM | trained model included |
 | `mobile/` | Flutter · SQLCipher · camera | analyzes clean, 26 tests |
 | `scripts/` | hardcoding & secret scanner | runs inside the test suite |
@@ -42,6 +65,10 @@ Trained model        quadratic kappa 0.932 · referable sensitivity 0.914
 ---
 
 ## Live deployment
+
+> **Heads up:** no live deployment is currently confirmed. The Render URLs below
+> are from an earlier deploy and may be dead; the Render services are not in the
+> maintainer's current account. Use the free path below for a fresh, non-expiring deploy.
 
 | Service | URL |
 |---|---|
@@ -203,6 +230,7 @@ cd backend && python ../scripts/seed_demo.py
 | Admin | `admin@retinasight.ai` | from `RS_SEED_ADMIN_PASSWORD` |
 
 Clearly labelled synthetic data; the script refuses to run in production.
+These logins work only against a locally seeded database. Open **http://localhost:5173**, sign in as the doctor, and try *Patients → a patient* (trend) and *Reviews → a case → Report*.
 
 ### 5. Mobile (optional)
 
@@ -370,7 +398,7 @@ container filesystem is ephemeral, so patient images would be lost on deploy.
 
 ```bash
 cd backend    && python -m pytest          # 169
-cd dashboard  && npm test                  # 97
+cd dashboard  && npm test                  # 101
 cd ml         && python -m pytest tests/   # 35
 cd mobile     && flutter test              # 26
 python scripts/check_no_hardcoding.py
